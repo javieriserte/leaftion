@@ -1,4 +1,4 @@
-package org.jiserte.jtrip;
+package org.jiserte.leaftion;
 
 public class Convolution {
   

@@ -1,7 +1,7 @@
-package org.jiserte.jtrip;
+package org.jiserte.leaftion;
 
 /**
- * Esta clase es para probar el cálculo del número condicional de una matriz 
+ * Esta clase es para probar el cï¿½lculo del nï¿½mero condicional de una matriz 
  * usando el paquete JAMA
  * @author Javier
  *
