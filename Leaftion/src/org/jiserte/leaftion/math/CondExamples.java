@@ -1,4 +1,4 @@
-package org.jiserte.leaftion;
+package org.jiserte.leaftion.math;
 
 /**
  * Esta clase es para probar el c�lculo del n�mero condicional de una matriz 

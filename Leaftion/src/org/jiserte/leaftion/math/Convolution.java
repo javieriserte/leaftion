@@ -1,4 +1,4 @@
-package org.jiserte.leaftion;
+package org.jiserte.leaftion.math;
 
 public class Convolution {
   
