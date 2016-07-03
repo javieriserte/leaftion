@@ -32,7 +32,9 @@ public class SpaceTimeDerivatives {
 	    
 		double[][] fdt = Matrix2dOp.zeros2D(width, height);
 		double[][] fpt = Matrix2dOp.zeros2D(width, height);
-	    
+	  
+//		System.out.println(Matrix2dOp.toString(fx, null));
+		
 		for (int i=0; i< length; i++) {
 			
 			fdt = Matrix2dOp.sum(fdt, Matrix2dOp.times( 
@@ -80,8 +82,31 @@ public class SpaceTimeDerivatives {
 	
 	public static void main(String[] args) {
 		
-		System.out.println( Arrays.toString(pre[0]) );
-		
+	  double[][][] timeSeries = new double[7][10][10];
+	  
+	  for (int f = 0 ; f < 7 ; f++) {
+	    
+	    for (int x = 0; x < 10; x++) {
+	      
+	      for (int y = 0 ; y < 10 ; y ++) {
+	        
+	        timeSeries[f][x][y] = x+1 + 2*(y+1) +f+1;
+	        
+	      }
+	      
+	    }
+	    
+	  }
+	  
+	  DerivativeResults r = SpaceTimeDerivatives.derivate(timeSeries, 0, 7);
+	  
+	  System.out.println( Matrix2dOp.toString(r.getFx(),null) );
+
+    System.out.println( Matrix2dOp.toString(r.getFy(),null) );
+
+	  System.out.println( Matrix2dOp.toString(r.getFt(),null) );
+
+	  
 	}
 
 }

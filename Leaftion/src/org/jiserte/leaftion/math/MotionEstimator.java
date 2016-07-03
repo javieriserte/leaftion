@@ -11,11 +11,22 @@ public class MotionEstimator {
 	
 	public static final double GRADIENT_THRESHOLD = 8;
 	
-	public void estimateMotionInSeries(List<BufferedImage> images) {
+	public Motions estimateMotionInSeries(List<BufferedImage> images) {
 		
 		ImageProcessor imgPr = new ImageProcessor();
 		
+		System.out.println("Antes de convertir a grayscales");
+		
 		double[][][] timeSeries = imgPr.timeSeriesToGrayScaleArray(images);
+		
+
+		System.out.println( timeSeries[0][0][0] + " " + timeSeries[0][1][0]);
+    System.out.println( timeSeries[0][0][1] + " " + timeSeries[0][1][1]);
+		
+    System.out.println("Después  de convertir a grayscales");
+
+		
+		double scaleFactor = imgPr.getScaleFactor();
 		
 		double[] blurKernel = new double[]{ 1/64, 6/64, 15/64, 20/64, 15/64, 
 				6/64, 1/64};
@@ -80,13 +91,9 @@ public class MotionEstimator {
 			// Compute optical Flow
 			// -------------------------------------------------------------- //
 			
-			int cx = 0;
-			
 			int badPixels = 0;
 			
 			for (int x = 0 ; x < xdim ; x++) {
-				
-				int cy = 0;
 				
 				for (int y = 0 ; y < ydim ; y++) {
 					
@@ -99,35 +106,108 @@ public class MotionEstimator {
 					
 					if ( grad[x][y] < GRADIENT_THRESHOLD || 
 							bigM.cond() > 100) {
-						Vx[x][y][k] = 0;
-						Vy[x][y][k] = 0;
+						Vx[k][x][y] = 0;
+						Vy[k][x][y] = 0;
 						badPixels++;
 					
 					} else {
 						
 						Matrix v = bigM.inverse().arrayTimes(smallB);
 						
-						Vx[x][y][k] = v.get(0, 0);
-						Vy[x][y][k] = v.get(0, 1);
+						Vx[k][x][y] = v.get(0, 0);
+						Vy[k][x][y] = v.get(0, 1);
 						
 					}
 					
-					
-					cy++;
-					
 				}
-				
-				cx ++;
 				
 			}
 			
 		}
-		
-		
+
 		// compute average horizontal and vertical motion
+		
+
+		double[] blurTemporalKernel = new double[13];
+		
+		for (int i = 0; i < blurTemporalKernel.length ; i++) {
+		  
+		  blurTemporalKernel[i] = 1/ 13;
+		  
+		}
+		
+		int numberOfTempBlurredFrames = numberOfBlurredFrames - blurTemporalKernel.length +1;
+		
+    double[] v_motion = new double[numberOfTempBlurredFrames];
+    
+    double[] h_motion = new double[numberOfTempBlurredFrames];
 
 		
+		for (int i = 0 ; i < numberOfTempBlurredFrames; i++) {
+		  
+		  double[][] vx = Matrix2dOp.zeros2D(xdim, ydim);
+      double[][] vy = Matrix2dOp.zeros2D(xdim, ydim);
+      
+      for (int k = 0; k < blurTemporalKernel.length; k++) {
+        for (int x = 0; x <xdim ; x++) {
+          for (int y = 0; y < ydim ; y++) {
+            vx[x][y] += vx[x][y] + blurTemporalKernel[k] * Vx[k+i][x][y];
+            vy[x][y] += vy[x][y] + blurTemporalKernel[k] * Vy[k+i][x][y];
+          }
+        }
+      }
+      
+      double eps = 2 ^ (-52);
+      int nx_eps = 0;
+      int ny_eps = 0;
+ 
+      
+      for (int x = 0; x <xdim ; x++) {
+        for (int y = 0; y < ydim ; y++) {
+
+          if (Math.abs(vx[x][y]) > eps) {
+            h_motion[i] += vx[x][y];
+            nx_eps++;
+          }
+
+          if (Math.abs(vy[x][y]) > eps) {
+            v_motion[i] += vy[x][y];
+            ny_eps++;
+          }
+
+        }
+      }
+      
+      h_motion[i] = h_motion[i] / ( scaleFactor * nx_eps); 
+      
+      v_motion[i] = -1 * v_motion[i] / ( scaleFactor * ny_eps); 
+		  
+		}
 		
+		return new Motions(h_motion, v_motion);
+
+		
+//		taps = 13;
+//		blur = ones(1,taps);
+//		blur = blur / sum(blur);
+
+//		c = 1;
+//		for k = 1 : N-taps+1
+//		    vx = zeros(size(Vx,1),size(Vx,2));
+//		    vy = zeros(size(Vy,1),size(Vy,2));
+//		    Vx2 = Vx(:,:,k:k+taps-1);
+//		    Vy2 = Vy(:,:,k:k+taps-1);
+//		    % temporal average
+//		    for j = 1 : length(blur)
+//		        vx = vx + blur(j)*Vx2(:,:,j);
+//		        vy = vy + blur(j)*Vy2(:,:,j);
+//		    end
+//		    indx = find( abs(vx) > eps );
+//		    indy = find( abs(vy) > eps );
+//		    motion_x(c) = 1/scale * mean( vx(indx) );
+//		    motion_y(c) = -1/scale * mean( vy(indy) );
+//		    c = c + 1;
+//		end
 		
 		
 	}

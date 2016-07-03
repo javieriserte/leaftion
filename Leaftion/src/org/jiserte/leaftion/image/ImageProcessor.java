@@ -7,8 +7,18 @@ import java.awt.image.BufferedImage;
 import java.util.List;
 
 public class ImageProcessor {
+  
+  private double scaleFactor;
 
-	public ImageProcessor() {
+	public double getScaleFactor() {
+    return scaleFactor;
+  }
+
+  public void setScaleFactor(double scaleFactor) {
+    this.scaleFactor = scaleFactor;
+  }
+
+  public ImageProcessor() {
 		
 		super();
 		
@@ -24,9 +34,13 @@ public class ImageProcessor {
 
 		
 		int width = images.get(0).getWidth();
+		System.out.println("widht:" + width);
 		int height = images.get(0).getHeight();
+    System.out.println("height" + height);
 		
-		double scaleFactor = 60 / ( Math.max(width, height) ); 
+    double scaleFactor = 60 / (double)( Math.max(width, height) );
+		
+		this.setScaleFactor(scaleFactor);
 		
 		int newWidth  = (int) (width * scaleFactor);
 		int newHeight = (int) (height * scaleFactor);
@@ -49,9 +63,21 @@ public class ImageProcessor {
 					height, null);
 			
 			g.dispose();
-			
-			result[frame] = this.toGrayScaleArray(resized);
-			
+      result[frame] = this.toGrayScaleArray(resized);
+      
+      System.out.println(
+      
+      new Color(currentImage.getRGB(0, 0)) + "\n" +
+
+      new Color(currentImage.getRGB(0, 1))  + "\n" +
+
+      new Color(currentImage.getRGB(0, 2)) + "\n" +
+
+      new Color(currentImage.getRGB(0, 3)) + "\n"
+
+      );
+//      result[frame] = this.toGrayScaleArray(currentImage);
+		
 		}
 		
 		return result;
@@ -76,7 +102,7 @@ public class ImageProcessor {
 				
 				intensity += c.getBlue() * 0.114 ;
 				
-				result[x][y] = Math.min(intensity,255);
+				result[x][y] = Math.round(Math.min(intensity,255));
 				
 				
 			}

@@ -123,8 +123,12 @@ public class Matrix2dOp {
 		
 		for (int i = 0 ; i < depth; i++) {
 			
-			Arrays.fill(result[i], zeros2D(width, height));
-		
+		  for (int x = 0; x < width; x++) {
+
+		    Arrays.fill(result[i][x], 0); 
+		    
+		  }
+		  
 		}
 		return result; 
 		
@@ -179,9 +183,9 @@ public class Matrix2dOp {
 			
 			for (int y=0; y < matrix[0].length; y++) {
 				
-				matrix[y][i] = value;
+				matrix[i][y] = value;
 				
-				matrix[y][matrix.length-1-i] = value;
+				matrix[matrix.length-1-i][y] = value;
 				
 			}
 			
