@@ -33,8 +33,6 @@ public class SpaceTimeDerivatives {
 		double[][] fdt = Matrix2dOp.zeros2D(width, height);
 		double[][] fpt = Matrix2dOp.zeros2D(width, height);
 	  
-//		System.out.println(Matrix2dOp.toString(fx, null));
-		
 		for (int i=0; i< length; i++) {
 			
 			fdt = Matrix2dOp.sum(fdt, Matrix2dOp.times( 

@@ -18,18 +18,13 @@ public class MotionEstimator {
 		System.out.println("Antes de convertir a grayscales");
 		
 		double[][][] timeSeries = imgPr.timeSeriesToGrayScaleArray(images);
-		
-
-		System.out.println( timeSeries[0][0][0] + " " + timeSeries[0][1][0]);
-    System.out.println( timeSeries[0][0][1] + " " + timeSeries[0][1][1]);
-		
+	
     System.out.println("Después  de convertir a grayscales");
 
-		
 		double scaleFactor = imgPr.getScaleFactor();
 		
-		double[] blurKernel = new double[]{ 1/64, 6/64, 15/64, 20/64, 15/64, 
-				6/64, 1/64};
+		double[] blurKernel = new double[]{ 1f/64, 6f/64, 15f/64, 20f/64, 15f/64, 
+				6f/64, 1f/64};
 		
 		int xdim = timeSeries[0].length;
 		int ydim = timeSeries[0][0].length;
@@ -49,12 +44,14 @@ public class MotionEstimator {
 		for (int k = 0 ; k < numberOfBlurredFrames; k++) {
 
 			DerivativeResults derivRes = SpaceTimeDerivatives.derivate(timeSeries, k, blurKernel.length);
-			
-			double[][] fx2 = Convolution.conv(
-					Matrix2dOp.elementWiseTimes(derivRes.getFx(), 
-							derivRes.getFx()), blurKernel, 1);
-			fx2 = Convolution.conv( fx2, blurKernel, 0);
 
+			double[][] elementWiseTimes = Matrix2dOp.elementWiseTimes(derivRes.getFx(), 
+      		derivRes.getFx());
+
+      double[][] fx2 = Convolution.conv(
+					elementWiseTimes, blurKernel, 1);
+			fx2 = Convolution.conv( fx2, blurKernel, 0);
+			
 			double[][] fy2 = Convolution.conv(
 					Matrix2dOp.elementWiseTimes(derivRes.getFy(), 
 							derivRes.getFy()), blurKernel, 1);
@@ -77,15 +74,18 @@ public class MotionEstimator {
 							derivRes.getFt()), blurKernel, 1);
 			fyt = Convolution.conv( fyt, blurKernel, 0);
 
-			double[][] grad = Matrix2dOp.power(
-					Matrix2dOp.sum(
-						Matrix2dOp.power( derivRes.getFx(), 2 ) ,
-						Matrix2dOp.power( derivRes.getFy() ,2 )
-							), 1/2);
+			
+			
+			double[][] fx_2 = Matrix2dOp.power( derivRes.getFx(), 2 );
+			
+      double[][] fy_2 = Matrix2dOp.power( derivRes.getFy() ,2 );
+      
+      double[][] f_sum_xy = Matrix2dOp.sum( fx_2 ,	fy_2 	);
+      
+      double[][] grad = Matrix2dOp.power( f_sum_xy, 0.5f);
 			
 			Matrix2dOp.border(grad, 5, 0);
 			
-
 			
 			// -------------------------------------------------------------- //
 			// Compute optical Flow
@@ -102,20 +102,25 @@ public class MotionEstimator {
 						{fxy[x][y], fy2[x][y]}
 					} );
 					
-					Matrix smallB = new Matrix ( new double[][]{ { fxt[x][y], fyt[x][y] } }); 
+				
+					Matrix smallB = new Matrix ( new double[][]{ { fxt[x][y]}, {fyt[x][y] } }); 
 					
-					if ( grad[x][y] < GRADIENT_THRESHOLD || 
-							bigM.cond() > 100) {
+					double cond = bigM.cond();
+					
+          if ( grad[x][y] < GRADIENT_THRESHOLD || 
+							cond > 100 ||
+							Double.isNaN(cond)) {
 						Vx[k][x][y] = 0;
 						Vy[k][x][y] = 0;
 						badPixels++;
 					
 					} else {
-						
-						Matrix v = bigM.inverse().arrayTimes(smallB);
-						
+
+					  Matrix inverse = bigM.inverse();
+            Matrix v = inverse.times(smallB);
+
 						Vx[k][x][y] = v.get(0, 0);
-						Vy[k][x][y] = v.get(0, 1);
+						Vy[k][x][y] = v.get(1, 0);
 						
 					}
 					
@@ -132,7 +137,7 @@ public class MotionEstimator {
 		
 		for (int i = 0; i < blurTemporalKernel.length ; i++) {
 		  
-		  blurTemporalKernel[i] = 1/ 13;
+		  blurTemporalKernel[i] = 1f/ 13;
 		  
 		}
 		
@@ -148,19 +153,22 @@ public class MotionEstimator {
 		  double[][] vx = Matrix2dOp.zeros2D(xdim, ydim);
       double[][] vy = Matrix2dOp.zeros2D(xdim, ydim);
       
+      
       for (int k = 0; k < blurTemporalKernel.length; k++) {
         for (int x = 0; x <xdim ; x++) {
           for (int y = 0; y < ydim ; y++) {
-            vx[x][y] += vx[x][y] + blurTemporalKernel[k] * Vx[k+i][x][y];
-            vy[x][y] += vy[x][y] + blurTemporalKernel[k] * Vy[k+i][x][y];
+            vx[x][y] += blurTemporalKernel[k] * Vx[k+i][x][y];
+            vy[x][y] += blurTemporalKernel[k] * Vy[k+i][x][y];
           }
         }
       }
-      
-      double eps = 2 ^ (-52);
+      System.out.println(Matrix2dOp.toString(vx, null));
+      double eps = Math.pow(2f, -52);
       int nx_eps = 0;
       int ny_eps = 0;
  
+      int dropped_x = 0;
+      int dropped_y = 0;
       
       for (int x = 0; x <xdim ; x++) {
         for (int y = 0; y < ydim ; y++) {
@@ -168,15 +176,24 @@ public class MotionEstimator {
           if (Math.abs(vx[x][y]) > eps) {
             h_motion[i] += vx[x][y];
             nx_eps++;
+          } else {
+            dropped_x++;  
           }
 
           if (Math.abs(vy[x][y]) > eps) {
             v_motion[i] += vy[x][y];
             ny_eps++;
+          } else {
+            dropped_y++;
+            
           }
+          
 
         }
       }
+      
+      System.out.println(String.format("Dropped:  x: %d  y: %d", dropped_x, dropped_y ));
+      
       
       h_motion[i] = h_motion[i] / ( scaleFactor * nx_eps); 
       
