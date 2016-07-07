@@ -7,6 +7,8 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 import javax.imageio.ImageIO;
@@ -157,7 +159,21 @@ public class ImageLibrary {
 			result.add(new ArrayList<>());
 		}
 		
+		List<String> absolutePathNames = new ArrayList<>();
+		
 		for (File file : this.imageFiles) {
+			
+			absolutePathNames.add(file.getAbsolutePath());
+			
+		}		
+		
+		Collections.sort(absolutePathNames);
+		
+		for (String fileString : absolutePathNames) {
+			
+			File file = new File(fileString);
+			
+			System.out.println(file.getName());
 			
 			int index = 0;
 
