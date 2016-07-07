@@ -23,7 +23,11 @@ public class ImageLibrary {
 
 	private BufferedImage brightCompositeImage;
 
-	public void getImageFilesInFolder(File folder) {
+	public BufferedImage getBrightCompositeImage() {
+    return brightCompositeImage;
+  }
+
+  public void getImageFilesInFolder(File folder) {
 
 		this.setImageFiles(folder.listFiles(new JpegFileNameFilter()));
 
