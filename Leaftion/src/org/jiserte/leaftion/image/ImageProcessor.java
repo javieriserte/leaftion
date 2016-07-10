@@ -6,11 +6,13 @@ import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.util.List;
 
+import org.jiserte.leaftion.events.ProcessingFramesListener;
+
 public class ImageProcessor {
   
   private double scaleFactor;
-
-	public double getScaleFactor() {
+  
+  	public double getScaleFactor() {
     return scaleFactor;
   }
 
@@ -34,9 +36,7 @@ public class ImageProcessor {
 
 		
 		int width = images.get(0).getWidth();
-		System.out.println("widht:" + width);
 		int height = images.get(0).getHeight();
-    System.out.println("height" + height);
 		
     double scaleFactor = 60 / (double)( Math.max(width, height) );
 		
@@ -64,19 +64,6 @@ public class ImageProcessor {
 			
 			g.dispose();
       result[frame] = this.toGrayScaleArray(resized);
-      
-      System.out.println(
-      
-      new Color(currentImage.getRGB(0, 0)) + "\n" +
-
-      new Color(currentImage.getRGB(0, 1))  + "\n" +
-
-      new Color(currentImage.getRGB(0, 2)) + "\n" +
-
-      new Color(currentImage.getRGB(0, 3)) + "\n"
-
-      );
-//      result[frame] = this.toGrayScaleArray(currentImage);
 		
 		}
 		

@@ -15,11 +15,7 @@ public class MotionEstimator {
 		
 		ImageProcessor imgPr = new ImageProcessor();
 		
-		System.out.println("Antes de convertir a grayscales");
-		
 		double[][][] timeSeries = imgPr.timeSeriesToGrayScaleArray(images);
-	
-    System.out.println("Después  de convertir a grayscales");
 
 		double scaleFactor = imgPr.getScaleFactor();
 		
@@ -91,7 +87,7 @@ public class MotionEstimator {
 			// Compute optical Flow
 			// -------------------------------------------------------------- //
 			
-			int badPixels = 0;
+			//int badPixels = 0;
 			
 			for (int x = 0 ; x < xdim ; x++) {
 				
@@ -107,12 +103,12 @@ public class MotionEstimator {
 					
 					double cond = bigM.cond();
 					
-          if ( grad[x][y] < GRADIENT_THRESHOLD || 
+          if ( grad[x][y] < MotionEstimator.GRADIENT_THRESHOLD || 
 							cond > 100 ||
 							Double.isNaN(cond)) {
 						Vx[k][x][y] = 0;
 						Vy[k][x][y] = 0;
-						badPixels++;
+						//badPixels++;
 					
 					} else {
 
@@ -131,7 +127,6 @@ public class MotionEstimator {
 		}
 
 		// compute average horizontal and vertical motion
-		
 
 		double[] blurTemporalKernel = new double[13];
 		
@@ -162,13 +157,13 @@ public class MotionEstimator {
           }
         }
       }
-      System.out.println(Matrix2dOp.toString(vx, null));
+
       double eps = Math.pow(2f, -52);
       int nx_eps = 0;
       int ny_eps = 0;
  
-      int dropped_x = 0;
-      int dropped_y = 0;
+//      int dropped_x = 0;
+//      int dropped_y = 0;
       
       for (int x = 0; x <xdim ; x++) {
         for (int y = 0; y < ydim ; y++) {
@@ -177,57 +172,26 @@ public class MotionEstimator {
             h_motion[i] += vx[x][y];
             nx_eps++;
           } else {
-            dropped_x++;  
+//            dropped_x++;  
           }
 
           if (Math.abs(vy[x][y]) > eps) {
             v_motion[i] += vy[x][y];
             ny_eps++;
           } else {
-            dropped_y++;
+//            dropped_y++;
             
           }
-          
-
         }
       }
       
-      System.out.println(String.format("Dropped:  x: %d  y: %d", dropped_x, dropped_y ));
-      
-      
       h_motion[i] = h_motion[i] / ( scaleFactor * nx_eps); 
-      
       v_motion[i] = -1 * v_motion[i] / ( scaleFactor * ny_eps); 
 		  
 		}
 		
 		return new Motions(h_motion, v_motion);
-
-		
-//		taps = 13;
-//		blur = ones(1,taps);
-//		blur = blur / sum(blur);
-
-//		c = 1;
-//		for k = 1 : N-taps+1
-//		    vx = zeros(size(Vx,1),size(Vx,2));
-//		    vy = zeros(size(Vy,1),size(Vy,2));
-//		    Vx2 = Vx(:,:,k:k+taps-1);
-//		    Vy2 = Vy(:,:,k:k+taps-1);
-//		    % temporal average
-//		    for j = 1 : length(blur)
-//		        vx = vx + blur(j)*Vx2(:,:,j);
-//		        vy = vy + blur(j)*Vy2(:,:,j);
-//		    end
-//		    indx = find( abs(vx) > eps );
-//		    indy = find( abs(vy) > eps );
-//		    motion_x(c) = 1/scale * mean( vx(indx) );
-//		    motion_y(c) = -1/scale * mean( vy(indy) );
-//		    c = c + 1;
-//		end
-		
 		
 	}
-	
 
 }

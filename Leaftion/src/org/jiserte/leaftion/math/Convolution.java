@@ -23,18 +23,6 @@ public class Convolution {
         double new_val = 0;
         
         int c_a = axis == AXIS_X ? i : j;
-       
-//        int i_index = Math.min(Math.max( 0,  semi_k-c_a ) , semi_k);
-//        int e_index = Math.min(Math.max( semi_k,  len_c - (c_a+1)+semi_k ) , kernel.length-1);
-//        
-//        for (int k = i_index ; k<= e_index; k++) {
-//          
-//          new_val += kernel[k] * input[i+(k-semi_k) * (1-axis)] [j+(k-semi_k)*(axis)]; 
-//
-//        }
-//        
-//        result[i][j] = new_val;
-        
         
         for (int k = 0 ; k< kernel.length ; k++) {
           
@@ -45,7 +33,6 @@ public class Convolution {
         }
         
         result[i][j] = new_val;
-
         
       }
 
@@ -66,22 +53,11 @@ public class Convolution {
       {6 ,  12 ,  18   ,24  , 30  , 36}  };
 
       
-      double[][] m2 = new double[][] { 
-        {1 ,   2 ,   3   , 4  }  };
-
-        
     double[] kernel = new double[]{-1,0,1};
-    double[] kerne2 = new double[]{0.3,0.4,0.3};
+    
+    double[][] cmat = conv(m, kernel, 1);
 
-    
-    double[][] cmat = conv(m2, kernel, 1);
-//    cmat = conv(cmat, kernel, 1);
-      
-      
-    //System.out.println(matrixToString(m));
     System.out.println(matrixToString(cmat));
-      
-    
 
   }
   

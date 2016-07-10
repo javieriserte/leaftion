@@ -1,7 +1,5 @@
 package org.jiserte.leaftion.math;
 
-import java.util.Arrays;
-
 public class SpaceTimeDerivatives {
 	
 	private static final double[][] pre = new double[][] {  
@@ -77,35 +75,6 @@ public class SpaceTimeDerivatives {
 		
 	}
 	
-	
-	public static void main(String[] args) {
-		
-	  double[][][] timeSeries = new double[7][10][10];
-	  
-	  for (int f = 0 ; f < 7 ; f++) {
-	    
-	    for (int x = 0; x < 10; x++) {
-	      
-	      for (int y = 0 ; y < 10 ; y ++) {
-	        
-	        timeSeries[f][x][y] = x+1 + 2*(y+1) +f+1;
-	        
-	      }
-	      
-	    }
-	    
-	  }
-	  
-	  DerivativeResults r = SpaceTimeDerivatives.derivate(timeSeries, 0, 7);
-	  
-	  System.out.println( Matrix2dOp.toString(r.getFx(),null) );
-
-    System.out.println( Matrix2dOp.toString(r.getFy(),null) );
-
-	  System.out.println( Matrix2dOp.toString(r.getFt(),null) );
-
-	  
-	}
 
 }
 
