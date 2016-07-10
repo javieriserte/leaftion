@@ -55,6 +55,7 @@ public class Leaftion extends JFrame {
   private String[] logContent;
   private int logContentIndex;
   private Locale locale;
+  private List<Motions> motionDetectionResults;
   // ------------------------------------------------------------------------ //
 
 
@@ -72,6 +73,8 @@ public class Leaftion extends JFrame {
   private JLabel counterLabel;
   private JLabel localeLabel;
   private JComboBox<String> localeComboBox;
+  private JButton optimButton;
+  
   // ------------------------------------------------------------------------ //
 
   public static void main(String[] args) {
@@ -103,20 +106,20 @@ public class Leaftion extends JFrame {
 
     // ---------------------------------------------------------------------- //
     // Define variables comunes
-    Dimension sepDimension = new Dimension(30, 10);
+    Dimension sepDimension = new Dimension(15, 10);
     // ---------------------------------------------------------------------- //
 
     // ---------------------------------------------------------------------- //
     // Define el label para mostrar el nombre de la carpeta
     this.currentFolderLabel = new JLabel("Ninguna carpeta elegida");
-    currentFolderLabel.setMinimumSize(new Dimension(250, 50));
-    currentFolderLabel.setPreferredSize(new Dimension(450, 50));
-    currentFolderLabel.setMaximumSize(new Dimension(450, 50));
+    currentFolderLabel.setMinimumSize(new Dimension(150, 50));
+    currentFolderLabel.setPreferredSize(new Dimension(250, 50));
+    currentFolderLabel.setMaximumSize(new Dimension(250, 50));
     // ---------------------------------------------------------------------- //
 
     // ---------------------------------------------------------------------- //
     // Define el botón para buscar la carpeta de imágenes
-    JButton button = new JButton("Buscar Carpeta");
+    JButton button = new JButton(UIManager.getIcon("FileView.directoryIcon"));
     button.addActionListener(new ActionListener() {
       @Override
       public void actionPerformed(ActionEvent e) {
@@ -249,76 +252,80 @@ public class Leaftion extends JFrame {
             }
             Leaftion.this.modifyLastLog("Estimating motions Done");
 
-            String directory = null;
-            String file = null;
+        	Leaftion.this.motionDetectionResults = motionList;
+        	
+        	
 
-            while (true) {
-
-              FileDialog out = new FileDialog(Leaftion.this,
-                  "Elija archivo de salida", FileDialog.SAVE);
-              out.setVisible(true);
-
-              directory = out.getDirectory();
-              file = out.getFile();
-
-              if (directory == null || file == null) {
-                Leaftion.this
-                    .addToLog("Error: File not found or save cancelled");
-                
-                int input = JOptionPane.showConfirmDialog(Leaftion.this,
-                    "No ha seleccionado un archivo para guardar los resultados.\nSi no lo hace los datos se perderán.", 
-                    "Seleccione una opción", 
-                    JOptionPane.OK_CANCEL_OPTION,
-                    JOptionPane.WARNING_MESSAGE);
-                
-                if (input == JOptionPane.CANCEL_OPTION) {
-                  return;
-                }
-                
-              } else {
-                break;
-              }
-            }
-
-            File outfile = new File(directory, file);
-
-            PrintStream os;
-            try {
-              os = new PrintStream(outfile);
-              
-              boolean firstField = true;
-              for (int i = 0; i < labels.size(); i++) {
-                  if (!firstField) {
-                    os.print(";");
-                  }
-                  os.print(labels.get(i));
-                  firstField = false;
-                }
-                os.println("");
-
-              for (int i = 0; i < motionList.get(0).getV_motion().length; i++) {
-
-                firstField = true;
-                for (int j = 0; j < motionList.size(); j++) {
-                  if (!firstField) {
-                    os.print(";");
-                  }
-                  os.print(String.format(Leaftion.this.getLocale(), "%8.5f",
-                      motionList.get(j).getV_motion()[i]));
-                  firstField = false;
-                }
-                os.println("");
-
-              }
-              os.close();
-              
-              Leaftion.this.addToLog(
-                  "Results Saved on file: " +
-                  outfile.getAbsolutePath() );
-
-            } catch (FileNotFoundException e1) {
-              e1.printStackTrace();
-            }
+//            String directory = null;
+//            String file = null;
+//
+//            while (true) {
+//
+//              FileDialog out = new FileDialog(Leaftion.this,
+//                  "Elija archivo de salida", FileDialog.SAVE);
+//              out.setVisible(true);
+//
+//              directory = out.getDirectory();
+//              file = out.getFile();
+//
+//              if (directory == null || file == null) {
+//                Leaftion.this
+//                    .addToLog("Error: File not found or save cancelled");
+//                
+//                int input = JOptionPane.showConfirmDialog(Leaftion.this,
+//                    "No ha seleccionado un archivo para guardar los resultados.\nSi no lo hace los datos se perderán.", 
+//                    "Seleccione una opción", 
+//                    JOptionPane.OK_CANCEL_OPTION,
+//                    JOptionPane.WARNING_MESSAGE);
+//                
+//                if (input == JOptionPane.CANCEL_OPTION) {
+//                  return;
+//                }
+//                
+//              } else {
+//                break;
+//              }
+//            }
+//
+//            File outfile = new File(directory, file);
+//
+//            PrintStream os;
+//            try {
+//              os = new PrintStream(outfile);
+//              
+//              boolean firstField = true;
+//              for (int i = 0; i < labels.size(); i++) {
+//                  if (!firstField) {
+//                    os.print(";");
+//                  }
+//                  os.print(labels.get(i));
+//                  firstField = false;
+//                }
+//                os.println("");
+//
+//              for (int i = 0; i < motionList.get(0).getV_motion().length; i++) {
+//
+//                firstField = true;
+//                for (int j = 0; j < motionList.size(); j++) {
+//                  if (!firstField) {
+//                    os.print(";");
+//                  }
+//                  os.print(String.format(Leaftion.this.getLocale(), "%8.5f",
+//                      motionList.get(j).getV_motion()[i]));
+//                  firstField = false;
+//                }
+//                os.println("");
+//
+//              }
+//              os.close();
+//              
+//              Leaftion.this.addToLog(
+//                  "Results Saved on file: " +
+//                  outfile.getAbsolutePath() );
+//
+//            } catch (FileNotFoundException e1) {
+//              e1.printStackTrace();
+//            }
           }
         });
 
@@ -333,8 +340,8 @@ public class Leaftion extends JFrame {
     this.localeLabel = new JLabel("Locale:");
     this.localeLabel.setToolTipText("Elija el idioma para guardar los resultados");
     this.localeComboBox = new JComboBox<>(new String[]{"es_AR", "en_US"});
-    this.localeComboBox.setPreferredSize(new Dimension(70,25));
-    this.localeComboBox.setMaximumSize(new Dimension(70,25));
+    this.localeComboBox.setPreferredSize(new Dimension(80,25));
+    this.localeComboBox.setMaximumSize(new Dimension(80,25));
 
     this.localeComboBox.addItemListener(new ItemListener() {
       
@@ -349,13 +356,40 @@ public class Leaftion extends JFrame {
 
     // ---------------------------------------------------------------------- //
     
+    this.optimButton = new JButton("Opt!");
+    
+    this.optimButton.addActionListener(new ActionListener() {
+		
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			
+			SwingUtilities.invokeLater(new Runnable() {
+				
+				@Override
+				public void run() {
+					
+					JFrame optFrame = new JFrame();
+					optFrame.add(new OptimizePanel());
+					optFrame.setVisible(true);
+					optFrame.setPreferredSize(new Dimension(1024, 768));
+					optFrame.setSize(new Dimension(1024, 768));
+					optFrame.setLocationRelativeTo(null);
+					optFrame.setTitle("Optimize");
+					optFrame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+					optFrame.pack();					
+					
+				}
+			});
+			
+		}
+	});
+    
     // ---------------------------------------------------------------------- //
     // Define la toolbar
     JToolBar tb = new JToolBar();
 
     tb.addSeparator(new Dimension(10, 0));
     tb.add(button);
-    tb.addSeparator(sepDimension);
     tb.add(this.currentFolderLabel);
     tb.addSeparator(sepDimension);
     tb.add(buttonBright);
@@ -369,6 +403,12 @@ public class Leaftion extends JFrame {
     tb.addSeparator(sepDimension);
     tb.add(this.localeLabel);
     tb.add(this.localeComboBox);
+    tb.addSeparator(sepDimension);
+    tb.add(this.optimButton);
+    
+    
+
+    
     this.localeComboBox.setSelectedIndex(0);
     this.setLocale(this.localeComboBox.getItemAt(0));
     
