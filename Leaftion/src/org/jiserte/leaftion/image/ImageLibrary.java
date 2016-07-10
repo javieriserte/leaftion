@@ -7,7 +7,9 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 import javax.imageio.ImageIO;
@@ -33,7 +35,16 @@ public class ImageLibrary {
 
   public void getImageFilesInFolder(File folder) {
 
-    this.setImageFiles(folder.listFiles(new JpegFileNameFilter()));
+    File[] listFiles = folder.listFiles(new JpegFileNameFilter());
+    
+    Arrays.sort(listFiles, new Comparator<File>() {
+		@Override
+		public int compare(File o1, File o2) {
+			return o1.getAbsolutePath().compareTo(o2.getAbsolutePath());
+		}
+	});
+    
+	this.setImageFiles(listFiles);
 
   }
 
