@@ -4,9 +4,12 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.AdjustmentEvent;
 import java.awt.event.AdjustmentListener;
 
@@ -21,6 +24,8 @@ import javax.swing.ListCellRenderer;
 import javax.swing.border.BevelBorder;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
+
+import org.jiserte.leaftion.math.ModelEvaluator;
 
 public class OptimizePanel extends JPanel {
 
@@ -92,11 +97,57 @@ public class OptimizePanel extends JPanel {
 			public Component getListCellRendererComponent(JList<? extends FittedMotions> list, FittedMotions value,
 					int index, boolean isSelected, boolean cellHasFocus) {
 				
-				JLabel r = new JLabel(value.label);
+				JLabel regionLabel = new JLabel(value.label);
+				
+				regionLabel.setFont(new Font("Verdana",Font.BOLD,12));
 				
 				JPanel jPanel = new JPanel();
-				jPanel.setLayout(new BorderLayout());
-				jPanel.add(r, BorderLayout.CENTER);
+				GridBagLayout mgr = new GridBagLayout();
+				jPanel.setLayout(mgr);				
+				
+				mgr.columnWidths = new int[]{100,100};
+				mgr.columnWeights = new double[]{0,1};
+				mgr.rowHeights = new int[]{20,20};
+				mgr.rowWeights = new double[]{1,1};
+				
+				GridBagConstraints c = new GridBagConstraints();
+				c.anchor = GridBagConstraints.CENTER;
+				c.fill = GridBagConstraints.BOTH;
+				
+				c.gridx=0;
+				c.gridy=0;
+				c.gridwidth=2;
+				jPanel.add(regionLabel, c);
+				
+				String per = "Período: ";
+				String phase = "Fase: ";
+				
+				if (value.fittedModel == null ) {
+					per = per + "-";
+					phase = phase + "-";
+				} else {
+					per = per + String.format("%5.2f", value.fittedModel.getPeriod());
+					phase = phase + String.format("%5.2f", value.fittedModel.getPhase());
+				}
+				
+				JLabel perLabel = new JLabel(per);
+				JLabel phaseLabel = new JLabel(phase);
+				
+				Font font = new Font("Verdana",0,10);
+				
+				perLabel.setFont(font);
+				c.gridx=0;
+				c.gridy=1;
+				c.gridwidth=1;
+				jPanel.add(perLabel, c);
+
+
+				c.gridx=1;
+				c.gridy=1;
+				phaseLabel.setFont( font);
+				jPanel.add(phaseLabel, c);
+
+				
 //				jPanel.setBorder(BorderFactory.createLineBorder(Color.gray));
 				jPanel.setBackground( isSelected?new Color( 0, 150, 240):Color.white);
 				return jPanel;
@@ -113,8 +164,9 @@ public class OptimizePanel extends JPanel {
         OptimizePanel.this.plotPanel.yData = motion.motions.getV_motion();
         
         OptimizePanel.this.plotPanel.xData = new double[OptimizePanel.this.plotPanel.yData.length];
+        
         for (int i = 0 ; i< OptimizePanel.this.plotPanel.xData.length; i++) {
-          OptimizePanel.this.plotPanel.xData[i] = (double) i;
+          OptimizePanel.this.plotPanel.xData[i] = (double) i * OptimizePanel.this.interval;
         }
         
         OptimizePanel.this.plotPanel.startSelectIndex = 0;
@@ -179,6 +231,40 @@ public class OptimizePanel extends JPanel {
       }
     });
     JButton optimButton = new JButton("Optimize");
+    
+    
+    optimButton.addActionListener(new ActionListener() {
+		
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			
+			int[] selIdx = OptimizePanel.this.motionsList.getSelectedIndices();
+			
+			for (int i : selIdx) {
+			
+				FittedMotions fm = motionsList.getModel().getElementAt(i);
+				
+				double[] y = fm.motions.getV_motion();
+				
+				double[] x = new double[y.length];
+				
+				for (int j = 0; j < x.length; j++) {
+					
+					x[j] = j * interval;
+					
+				}
+				
+				ModelEvaluator me = new ModelEvaluator( 10000, x, y );
+				
+				motionsList.getModel().getElementAt(i).fittedModel = me.optimize();
+				
+				motionsList.updateUI();
+			
+			}
+			
+			
+		}
+	});
 
     layout.columnWidths = new int[]{50,100,50};
     layout.rowHeights = new int[]{20,20};
@@ -210,11 +296,8 @@ public class OptimizePanel extends JPanel {
     
     optionsPanel.add(optimButton, c);
 
-//		this.add(this.motionsList, BorderLayout.WEST);
-//		
-//		this.add(this.plotPanel, BorderLayout.CENTER);
-		
-		JSplitPane jSplitPane = new JSplitPane();
+	
+	JSplitPane jSplitPane = new JSplitPane();
     jSplitPane.setLeftComponent(this.motionsList);
 		jSplitPane.setRightComponent(this.plotPanel);
     this.add(jSplitPane, BorderLayout.CENTER);
@@ -229,7 +312,7 @@ public class OptimizePanel extends JPanel {
 	  this.motions = motions;
 	  
 	  if (motions.length>0) {
-	    
+
 	    this.motionsList.setListData(motions);
 	    this.motionsList.updateUI();
 	    

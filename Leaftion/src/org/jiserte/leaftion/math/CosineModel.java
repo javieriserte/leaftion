@@ -47,5 +47,12 @@ public class CosineModel {
 	public String toString() {
 		return String.format("[ Amp: %7.4f Phase: %7.4f Period: %7.4f]", this.vars[0],this.vars[1], this.vars[2]);
 	}
+	
+	public double getPeriod() {
+		return this.vars[2];
+	}
 
+	public double getPhase() {
+		return this.vars[1];
+	}
 }
