@@ -4,15 +4,23 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.event.AdjustmentEvent;
+import java.awt.event.AdjustmentListener;
 
 import javax.swing.BorderFactory;
+import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
+import javax.swing.JScrollBar;
+import javax.swing.JSplitPane;
 import javax.swing.ListCellRenderer;
 import javax.swing.border.BevelBorder;
-
-import org.jiserte.leaftion.math.Motions;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 
 public class OptimizePanel extends JPanel {
 
@@ -23,36 +31,54 @@ public class OptimizePanel extends JPanel {
 
 
 	private FittedMotions[] motions;
-	
-	
 	private JList<FittedMotions> motionsList;
 	private MotionPlotPanel plotPanel;
+	private double interval;
+
+
+  private JScrollBar startScrollBar;
+
+
+  private JScrollBar endScrollBar;
 	
 	
 	
 
 	public OptimizePanel() {
 		super();
-		
+
+
 		// ------------------------------------------------------------------ //
 		// Create dummies Fitted Motions for debug
-		FittedMotions fm1 = new FittedMotions();
-		fm1.label = "FM1";
-		fm1.fittedModel = null;
-		fm1.motions = new Motions(new double[]{0,0,0}, new double[]{1,2,3});
-		FittedMotions fm2 = new FittedMotions();
-		fm2.label = "FM2";
-		fm2.fittedModel = null;
-		fm2.motions = new Motions(new double[]{0,0,0}, new double[]{2,3,4});
-		this.motions = new FittedMotions[]{fm1,fm2};
+//		FittedMotions fm1 = new FittedMotions();
+//		fm1.label = "FM1";
+//		fm1.fittedModel = null;
+//		fm1.motions = new Motions(
+//		    new double[]{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20}, 
+//		    new double[]{0,1,2,3,2,1,0,-1,-2,-1,0,0,1,2,1,2,1,0,-1,-4,-1});
+//		FittedMotions fm2 = new FittedMotions();
+//		fm2.label = "FM2";
+//		fm2.fittedModel = null;
+//		fm2.motions = new Motions(
+//		    new double[]{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20}, 
+//		    new double[]{-2,-1,0,0,1,2,3,2,1,0,-1,-2,-1,-3,-2.5,-1,2,3,3,1,0});
+//		this.motions = new FittedMotions[]{fm1,fm2};
 		// ------------------------------------------------------------------ //
-		
+		this.interval = 1;
 		this.createGUI();
 	}
 
-	private void createGUI() {
+	public double getInterval() {
+    return interval;
+  }
 
-		this.motionsList = new JList<>(motions);
+  public void setInterval(double interval) {
+    this.interval = interval;
+  }
+
+  private void createGUI() {
+
+		this.motionsList = new JList<>();
 		
 		this.motionsList.setBorder(BorderFactory.createBevelBorder(BevelBorder.LOWERED));
 		
@@ -77,21 +103,139 @@ public class OptimizePanel extends JPanel {
 			}
 		});
 		
+		this.motionsList.addListSelectionListener(new ListSelectionListener() {
+      
+      @Override
+      public void valueChanged(ListSelectionEvent e) {
+        
+        FittedMotions motion = OptimizePanel.this.motionsList.getSelectedValue();
+        
+        OptimizePanel.this.plotPanel.yData = motion.motions.getV_motion();
+        
+        OptimizePanel.this.plotPanel.xData = new double[OptimizePanel.this.plotPanel.yData.length];
+        for (int i = 0 ; i< OptimizePanel.this.plotPanel.xData.length; i++) {
+          OptimizePanel.this.plotPanel.xData[i] = (double) i;
+        }
+        
+        OptimizePanel.this.plotPanel.startSelectIndex = 0;
+        OptimizePanel.this.plotPanel.endSelectIndex = 0;
+        if (OptimizePanel.this.startScrollBar != null) {
+          OptimizePanel.this.startScrollBar.setValue(0);
+          OptimizePanel.this.startScrollBar.setMaximum(OptimizePanel.this.plotPanel.yData.length);
+        }
+        if (OptimizePanel.this.endScrollBar != null) {
+          OptimizePanel.this.endScrollBar.setValue(0);
+          OptimizePanel.this.endScrollBar.setMaximum(OptimizePanel.this.plotPanel.yData.length);
+        }
+        
+        
+        OptimizePanel.this.plotPanel.updateUI();
+      }
+      
+    } );
+		
 		this.plotPanel = new MotionPlotPanel();
 		
-		this.plotPanel.xData = new double[]{0,1,2,3,4,5,6,7,8,9,10};
-		this.plotPanel.yData = new double[]{0,1,2,3,2,1,0,-1,-2,-1,0};
-
+//		this.motionsList.setSelectedIndex(0);
+//		this.plotPanel.yData = this.motionsList.getSelectedValue().motions.getV_motion();
+//    this.plotPanel.xData = new double[this.plotPanel.yData.length];
+//    for (int i = 0 ; i< this.plotPanel.xData.length; i++) {
+//      this.plotPanel.xData[i] = (double) i;
+//    }
+		
+		
 		
 		this.setLayout(new BorderLayout());
 		
-		this.add(this.motionsList, BorderLayout.WEST);
+		JPanel optionsPanel = new JPanel();
 		
-		this.add(this.plotPanel, BorderLayout.CENTER);
+		GridBagLayout layout = new GridBagLayout();
+		GridBagConstraints c = new GridBagConstraints();
+		
+		optionsPanel.setLayout(layout);
+		
+//		this.startScrollBar = new JScrollBar(JScrollBar.HORIZONTAL, 0, 1, 0, this.plotPanel.yData.length);
+    this.startScrollBar = new JScrollBar(JScrollBar.HORIZONTAL, 0, 1, 0, 1);
+
+		
+		this.startScrollBar.addAdjustmentListener(new AdjustmentListener() {
+      @Override
+      public void adjustmentValueChanged(AdjustmentEvent e) {
+        OptimizePanel.this.plotPanel.startSelectIndex = e.getValue();
+        OptimizePanel.this.plotPanel.updateUI();
+      }
+      
+    });
+
+    this.endScrollBar = new JScrollBar(JScrollBar.HORIZONTAL, 0, 1, 0, 1);
+//    this.endScrollBar = new JScrollBar(JScrollBar.HORIZONTAL, 0, 1, 0, this.plotPanel.yData.length);
+    
+    this.endScrollBar.addAdjustmentListener(new AdjustmentListener() {
+      
+      @Override
+      public void adjustmentValueChanged(AdjustmentEvent e) {
+        OptimizePanel.this.plotPanel.endSelectIndex = e.getValue();
+        OptimizePanel.this.plotPanel.updateUI();
+      }
+    });
+    JButton optimButton = new JButton("Optimize");
+
+    layout.columnWidths = new int[]{50,100,50};
+    layout.rowHeights = new int[]{20,20};
+    layout.columnWeights = new double[]{0,1,0};
+    layout.rowWeights = new double[]{1,1};
+
+    c.insets = new Insets(5, 5, 5, 5);
+		c.fill = GridBagConstraints.BOTH;
+
+    c.gridx = 0;
+    c.gridy = 0;
+		optionsPanel.add(new JLabel("Inicio de selección:"), c);
+
+		c.gridx = 0;
+    c.gridy = 1;
+		optionsPanel.add(new JLabel("Fin de selección:"), c);
+		
+    c.gridx = 1;
+    c.gridy = 0;
+
+		optionsPanel.add(startScrollBar,c);
+		
+		c.gridy=1;
+    optionsPanel.add(endScrollBar,c);
+    
+    c.gridy = 0;
+    c.gridx=2;
+    c.gridheight = 2;
+    
+    optionsPanel.add(optimButton, c);
+
+//		this.add(this.motionsList, BorderLayout.WEST);
+//		
+//		this.add(this.plotPanel, BorderLayout.CENTER);
+		
+		JSplitPane jSplitPane = new JSplitPane();
+    jSplitPane.setLeftComponent(this.motionsList);
+		jSplitPane.setRightComponent(this.plotPanel);
+    this.add(jSplitPane, BorderLayout.CENTER);
+		
+		this.add(optionsPanel, BorderLayout.SOUTH);
 		
 	}
 	
 	
-	
+	public void setMotionEstimation( FittedMotions[] motions ) {
+	  
+	  this.motions = motions;
+	  
+	  if (motions.length>0) {
+	    
+	    this.motionsList.setListData(motions);
+	    this.motionsList.updateUI();
+	    
+	    
+	  }
+	  
+	}
 
 }
