@@ -35,7 +35,7 @@ public class ModelEvaluator {
 				model = newModel;
 				this.lastDiff = diff;
 				accepted ++;
-				System.out.println("Accepted: " + accepted + " Diff: " +diff);
+				System.out.println("Iter: "+ i + " Accepted: " + accepted + " Diff: " +diff);
 				
 			}
 			
