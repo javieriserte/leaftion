@@ -55,4 +55,5 @@ public class CosineModel {
 	public double getPhase() {
 		return this.vars[1];
 	}
+
 }

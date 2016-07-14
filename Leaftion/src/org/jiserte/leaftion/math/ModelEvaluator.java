@@ -17,7 +17,6 @@ public class ModelEvaluator {
 		this.lastDiff = Double.MAX_VALUE;
 	}
 	
-	
 	public CosineModel optimize() {
 		
 		CosineModel model = new CosineModel();

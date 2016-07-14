@@ -8,10 +8,17 @@ import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.LayoutManager;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.AdjustmentEvent;
 import java.awt.event.AdjustmentListener;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -25,6 +32,8 @@ import javax.swing.border.BevelBorder;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
+import org.jiserte.leaftion.math.CosineFitResult;
+import org.jiserte.leaftion.math.CosineModel;
 import org.jiserte.leaftion.math.ModelEvaluator;
 
 public class OptimizePanel extends JPanel {
@@ -37,13 +46,15 @@ public class OptimizePanel extends JPanel {
 
 	private FittedMotions[] motions;
 	private JList<FittedMotions> motionsList;
+	private JList<String> groupAvgList;
 	private MotionPlotPanel plotPanel;
 	private double interval;
 
 
   private JScrollBar startScrollBar;
 
-
+  private JLabel startFrameInd;
+  private JLabel endFrameInd;
   private JScrollBar endScrollBar;
 	
 	
@@ -52,24 +63,8 @@ public class OptimizePanel extends JPanel {
 	public OptimizePanel() {
 		super();
 
-
-		// ------------------------------------------------------------------ //
-		// Create dummies Fitted Motions for debug
-//		FittedMotions fm1 = new FittedMotions();
-//		fm1.label = "FM1";
-//		fm1.fittedModel = null;
-//		fm1.motions = new Motions(
-//		    new double[]{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20}, 
-//		    new double[]{0,1,2,3,2,1,0,-1,-2,-1,0,0,1,2,1,2,1,0,-1,-4,-1});
-//		FittedMotions fm2 = new FittedMotions();
-//		fm2.label = "FM2";
-//		fm2.fittedModel = null;
-//		fm2.motions = new Motions(
-//		    new double[]{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20}, 
-//		    new double[]{-2,-1,0,0,1,2,3,2,1,0,-1,-2,-1,-3,-2.5,-1,2,3,3,1,0});
-//		this.motions = new FittedMotions[]{fm1,fm2};
-		// ------------------------------------------------------------------ //
 		this.interval = 1;
+		
 		this.createGUI();
 	}
 
@@ -83,76 +78,73 @@ public class OptimizePanel extends JPanel {
 
   private void createGUI() {
 
+    
+    JPanel listPanel = new JPanel();
+    
+    GridBagLayout lpLayout = new GridBagLayout();
+    GridBagConstraints lpc = new GridBagConstraints();
+    
+    listPanel.setLayout(lpLayout);
+    
+    lpLayout.columnWeights = new double[]{1,1};
+    lpLayout.columnWidths = new int[]{100,100};
+    lpLayout.rowWeights = new double[]{0,0.5,0,0,0.5};
+    lpLayout.rowHeights = new int [] {20,0,20,20,0};
+    lpc.insets = new Insets(4,4,4,4);
+    
+    lpc.gridx = 0;
+    lpc.gridy = 0;
+    lpc.fill = GridBagConstraints.BOTH;
+    listPanel.add(new JLabel("Muetras"),lpc);
+    
+    JButton clearGroupsBtn = new JButton("Borrar");
+    lpc.gridx = 0;
+    lpc.gridy = 2;
+    listPanel.add(clearGroupsBtn,lpc);
+    
+    clearGroupsBtn.addActionListener(new ActionListener() {
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        OptimizePanel.this.clearGroups();
+      }
+    });
+    
+
+    JButton setGroupBtn = new JButton("Agrupar");
+    lpc.gridx = 1;
+    lpc.gridy = 2;
+    lpc.fill = GridBagConstraints.BOTH;
+    listPanel.add(setGroupBtn,lpc);
+
+    setGroupBtn.addActionListener(new ActionListener() {
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        OptimizePanel.this.groupSelected();
+      }
+    });
+    
+    lpc.gridx = 0;
+    lpc.gridy = 3;
+    listPanel.add(new JLabel("Grupos"),lpc);
+
+    lpc.gridx = 0;
+    lpc.gridy = 4;
+    lpc.gridwidth = 2;
+    this.groupAvgList = new JList<>();
+    this.groupAvgList.setBorder(BorderFactory.createBevelBorder(
+        BevelBorder.LOWERED));
+    listPanel.add(this.groupAvgList,lpc);
+
+    
 		this.motionsList = new JList<>();
-		
-		this.motionsList.setBorder(BorderFactory.createBevelBorder(BevelBorder.LOWERED));
+		this.motionsList.setBorder(BorderFactory.createBevelBorder(
+		    BevelBorder.LOWERED));
 		
 		this.motionsList.setMinimumSize(new Dimension(150, 100));
 		this.motionsList.setPreferredSize(new Dimension(150, 100));
 
 		
-		this.motionsList.setCellRenderer( new ListCellRenderer<FittedMotions>() {
-
-			@Override
-			public Component getListCellRendererComponent(JList<? extends FittedMotions> list, FittedMotions value,
-					int index, boolean isSelected, boolean cellHasFocus) {
-				
-				JLabel regionLabel = new JLabel(value.label);
-				
-				regionLabel.setFont(new Font("Verdana",Font.BOLD,12));
-				
-				JPanel jPanel = new JPanel();
-				GridBagLayout mgr = new GridBagLayout();
-				jPanel.setLayout(mgr);				
-				
-				mgr.columnWidths = new int[]{100,100};
-				mgr.columnWeights = new double[]{0,1};
-				mgr.rowHeights = new int[]{20,20};
-				mgr.rowWeights = new double[]{1,1};
-				
-				GridBagConstraints c = new GridBagConstraints();
-				c.anchor = GridBagConstraints.CENTER;
-				c.fill = GridBagConstraints.BOTH;
-				
-				c.gridx=0;
-				c.gridy=0;
-				c.gridwidth=2;
-				jPanel.add(regionLabel, c);
-				
-				String per = "Período: ";
-				String phase = "Fase: ";
-				
-				if (value.fittedModel == null ) {
-					per = per + "-";
-					phase = phase + "-";
-				} else {
-					per = per + String.format("%5.2f", value.fittedModel.getPeriod());
-					phase = phase + String.format("%5.2f", value.fittedModel.getPhase());
-				}
-				
-				JLabel perLabel = new JLabel(per);
-				JLabel phaseLabel = new JLabel(phase);
-				
-				Font font = new Font("Verdana",0,10);
-				
-				perLabel.setFont(font);
-				c.gridx=0;
-				c.gridy=1;
-				c.gridwidth=1;
-				jPanel.add(perLabel, c);
-
-
-				c.gridx=1;
-				c.gridy=1;
-				phaseLabel.setFont( font);
-				jPanel.add(phaseLabel, c);
-
-				
-//				jPanel.setBorder(BorderFactory.createLineBorder(Color.gray));
-				jPanel.setBackground( isSelected?new Color( 0, 150, 240):Color.white);
-				return jPanel;
-			}
-		});
+		this.motionsList.setCellRenderer( new MotionListCellRenderer());
 		
 		this.motionsList.addListSelectionListener(new ListSelectionListener() {
       
@@ -186,6 +178,11 @@ public class OptimizePanel extends JPanel {
       
     } );
 		
+		lpc.gridx=0;
+		lpc.gridy=1;
+		lpc.gridwidth=2;
+		listPanel.add(this.motionsList, lpc);
+		
 		this.plotPanel = new MotionPlotPanel();
 		
 //		this.motionsList.setSelectedIndex(0);
@@ -209,27 +206,56 @@ public class OptimizePanel extends JPanel {
 //		this.startScrollBar = new JScrollBar(JScrollBar.HORIZONTAL, 0, 1, 0, this.plotPanel.yData.length);
     this.startScrollBar = new JScrollBar(JScrollBar.HORIZONTAL, 0, 1, 0, 1);
 
-		
+    this.endScrollBar = new JScrollBar(JScrollBar.HORIZONTAL, 0, 1, 0, 1);
+//  this.endScrollBar = new JScrollBar(JScrollBar.HORIZONTAL, 0, 1, 0, this.plotPanel.yData.length);
+    
 		this.startScrollBar.addAdjustmentListener(new AdjustmentListener() {
       @Override
       public void adjustmentValueChanged(AdjustmentEvent e) {
-        OptimizePanel.this.plotPanel.startSelectIndex = e.getValue();
+        
+        int start = e.getValue();
+        int end = Math.max(start, OptimizePanel.this.endScrollBar.getValue() );
+        
+        OptimizePanel.this.endScrollBar.setValue(end);
+        OptimizePanel.this.plotPanel.startSelectIndex = start;
+        OptimizePanel.this.plotPanel.endSelectIndex = end;
+        
+        
+        OptimizePanel.this.startFrameInd.setText(String.valueOf(start));
+        OptimizePanel.this.endFrameInd.setText(String.valueOf(end));
+        
+//        OptimizePanel.this.endScrollBar.updateUI();
+        OptimizePanel.this.startFrameInd.updateUI();
+        OptimizePanel.this.endFrameInd.updateUI();
         OptimizePanel.this.plotPanel.updateUI();
       }
       
     });
 
-    this.endScrollBar = new JScrollBar(JScrollBar.HORIZONTAL, 0, 1, 0, 1);
-//    this.endScrollBar = new JScrollBar(JScrollBar.HORIZONTAL, 0, 1, 0, this.plotPanel.yData.length);
+
     
     this.endScrollBar.addAdjustmentListener(new AdjustmentListener() {
       
       @Override
       public void adjustmentValueChanged(AdjustmentEvent e) {
-        OptimizePanel.this.plotPanel.endSelectIndex = e.getValue();
+        int end = e.getValue();
+        int start = Math.min(end, OptimizePanel.this.startScrollBar.getValue() );
+        
+        OptimizePanel.this.plotPanel.startSelectIndex = start;
+        OptimizePanel.this.plotPanel.endSelectIndex = end;
+        
+        OptimizePanel.this.startScrollBar.setValue(start);
+        OptimizePanel.this.startFrameInd.setText(String.valueOf(start));
+        OptimizePanel.this.endFrameInd.setText(String.valueOf(end));
+//        
+//        OptimizePanel.this.startScrollBar.updateUI();
+        OptimizePanel.this.startFrameInd.updateUI();
+        OptimizePanel.this.endFrameInd.updateUI();
         OptimizePanel.this.plotPanel.updateUI();
       }
     });
+    
+    
     JButton optimButton = new JButton("Optimize");
     
     
@@ -254,9 +280,43 @@ public class OptimizePanel extends JPanel {
 					
 				}
 				
+				List<CosineModel> models = new ArrayList<>();
+				
 				ModelEvaluator me = new ModelEvaluator( 10000, x, y );
 				
-				motionsList.getModel().getElementAt(i).fittedModel = me.optimize();
+				for (int j = 0; j < 100; j++) {
+				  CosineModel cm = me.optimize();
+				  models.add(cm);
+				}
+				
+				double meanPer = 0;
+        double meanPha = 0;
+        double stdPer = 0;
+        double stdPha = 0;
+
+				
+				for ( CosineModel m : models) {
+				  meanPer += m.getPeriod();
+          meanPha += m.getPhase();
+				}
+				meanPer /= 100;
+				meanPha /= 100;
+
+				for ( CosineModel m : models) {
+          stdPer += Math.pow(m.getPeriod() - meanPer,2);
+          stdPha += Math.pow(m.getPhase() - meanPha,2);
+        }
+				stdPer = Math.sqrt( stdPer ) / 100;
+        stdPha = Math.sqrt( stdPha ) / 100;
+        
+        CosineFitResult r = new CosineFitResult();
+        
+        r.period = meanPer;
+        r.phase = meanPha;
+				r.stdPeriod = stdPer;
+				r.stdPhase = stdPha;
+				
+				motionsList.getModel().getElementAt(i).fittedModel = r;
 				
 				motionsList.updateUI();
 			
@@ -265,11 +325,13 @@ public class OptimizePanel extends JPanel {
 			
 		}
 	});
+    
+    JButton saveButton = new JButton("Guardar");
 
-    layout.columnWidths = new int[]{50,100,50};
-    layout.rowHeights = new int[]{20,20};
-    layout.columnWeights = new double[]{0,1,0};
-    layout.rowWeights = new double[]{1,1};
+    layout.columnWidths  = new int[] {50,100,40,50,50};
+    layout.rowHeights    = new int[] {20,20};
+    layout.columnWeights = new double[]{0,1,0,0,0};
+    layout.rowWeights    = new double[]{1,1};
 
     c.insets = new Insets(5, 5, 5, 5);
 		c.fill = GridBagConstraints.BOTH;
@@ -289,16 +351,30 @@ public class OptimizePanel extends JPanel {
 		
 		c.gridy=1;
     optionsPanel.add(endScrollBar,c);
+
+    this.startFrameInd = new JLabel();
+    c.gridy = 0;
+    c.gridx = 2;
+    optionsPanel.add(this.startFrameInd, c);
+
+    this.endFrameInd = new JLabel();
+    c.gridy = 1;
+    c.gridx = 2;
+    optionsPanel.add(this.endFrameInd, c);
     
     c.gridy = 0;
-    c.gridx=2;
+    c.gridx=3;
     c.gridheight = 2;
-    
     optionsPanel.add(optimButton, c);
-
+    
+    c.gridy = 0;
+    c.gridx=4;
+    c.gridheight = 2;
+    optionsPanel.add(saveButton, c);
+    
 	
 	JSplitPane jSplitPane = new JSplitPane();
-    jSplitPane.setLeftComponent(this.motionsList);
+    jSplitPane.setLeftComponent(listPanel);
 		jSplitPane.setRightComponent(this.plotPanel);
     this.add(jSplitPane, BorderLayout.CENTER);
 		
@@ -307,18 +383,127 @@ public class OptimizePanel extends JPanel {
 	}
 	
 	
-	public void setMotionEstimation( FittedMotions[] motions ) {
-	  
-	  this.motions = motions;
-	  
-	  if (motions.length>0) {
+	protected void groupSelected() {
 
-	    this.motionsList.setListData(motions);
-	    this.motionsList.updateUI();
+	 int maxGroupIndex = 0;
+	  
+	  for (int i = 0; i < this.motionsList.getModel().getSize(); i++) {
+	    if (! this.motionsList.isSelectedIndex(i)) {
+	      maxGroupIndex = Math.max(
+	          maxGroupIndex, 
+	          this.motionsList.getModel().getElementAt(i).group );
+	    }
+	  }
+	  maxGroupIndex++;
+	   
+    for (int i = 0; i < this.motionsList.getModel().getSize(); i++) {
+      if (this.motionsList.isSelectedIndex(i)) {
+        this.motionsList.getModel().getElementAt(i).group = maxGroupIndex;
+      }
+    }
+    
+    this.motionsList.updateUI();
+  }
+
+  protected void clearGroups() {
+    
+	  for (int i = 0; i < this.motionsList.getModel().getSize(); i++) {
+
+	    this.motionsList.getModel().getElementAt(i).group = 1;
 	    
 	    
 	  }
-	  
+	  this.motionsList.updateUI();
+    
+  }
+
+  public void setMotionEstimation( FittedMotions[] motions ) {
+	  this.motions = motions;
+	  if (motions.length>0) {
+	    this.motionsList.setListData(motions);
+	    this.clearGroups();
+	  }
 	}
+  
+  public void showGroupAverages() {
+  
+    Map<Integer, List<Double>> meansByGroup = new HashMap<>();
+    
+    for (int i = 0; i < this.motionsList.getModel().getSize(); i++) {
+
+      
+
+    }
+    
+  }
+  
+  public class MotionListCellRenderer implements ListCellRenderer<FittedMotions> {
+    @Override
+    public Component getListCellRendererComponent(
+        JList<? extends FittedMotions> list, FittedMotions value,
+        int index, boolean isSelected, boolean cellHasFocus) {
+      
+      JLabel regionLabel = new JLabel(value.label);
+      
+      regionLabel.setFont(new Font("Verdana",Font.BOLD,12));
+      
+      GridBagLayout mgr = new GridBagLayout();
+      
+      JPanel p = new JPanel();
+      p.setLayout(mgr);        
+      
+      mgr.columnWidths = new int[]{100,100};
+      mgr.columnWeights = new double[]{1,1};
+      mgr.rowHeights = new int[]{20,20};
+      mgr.rowWeights = new double[]{1,1};
+      
+      GridBagConstraints c = new GridBagConstraints();
+      c.anchor = GridBagConstraints.CENTER;
+      c.fill = GridBagConstraints.BOTH;
+      
+      c.gridx=0;
+      c.gridy=0;
+      c.gridwidth=2;
+      p.add(regionLabel, c);
+      
+      String per = "Período: ";
+      String phase = "Fase: ";
+      
+      if (value.fittedModel == null ) {
+        per = per + "-";
+        phase = phase + "-";
+      } else {
+        per = per + String.format("%5.2f(%3.2f)", value.fittedModel.period, value.fittedModel.stdPeriod);
+        phase = phase + String.format("%5.2f(%3.2f)", value.fittedModel.phase, value.fittedModel.stdPhase);
+      }
+      
+      JLabel perLabel = new JLabel(per);
+      JLabel phaseLabel = new JLabel(phase);
+      
+      Font font = new Font("Verdana",0,10);
+      
+      perLabel.setFont(font);
+      c.gridx=0;
+      c.gridy=1;
+      c.gridwidth=1;
+      p.add(perLabel, c);
+
+
+      c.gridx=1;
+      c.gridy=1;
+      phaseLabel.setFont( font);
+      p.add(phaseLabel, c);
+      
+      c.gridx=1;
+      c.gridy=0;
+      p.add(new JLabel("Grupo:" + value.group), c);
+
+      p.setBackground( isSelected?new Color( 0, 150, 240):Color.white);
+      return p;
+    }
+  }
+  
+  
+  
 
 }
