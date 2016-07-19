@@ -8,7 +8,6 @@ import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
-import java.awt.LayoutManager;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.AdjustmentEvent;
@@ -17,21 +16,21 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
-
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollBar;
+import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
+import javax.swing.JTextField;
 import javax.swing.ListCellRenderer;
 import javax.swing.border.BevelBorder;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
+import org.jiserte.leaftion.logpanel.LoggingListPanel;
 import org.jiserte.leaftion.math.CosineFitResult;
 import org.jiserte.leaftion.math.CosineModel;
 import org.jiserte.leaftion.math.ModelEvaluator;
@@ -43,17 +42,24 @@ public class OptimizePanel extends JPanel {
 	 */
 	private static final long serialVersionUID = -3642747013037883477L;
 
-	private FittedMotions[] motions;
+	@SuppressWarnings("unused")
+  private FittedMotions[] motions;
 	private JList<FittedMotions> motionsList;
 	private JList<String> groupAvgList;
 	private MotionPlotPanel plotPanel;
 	private double interval;
-
+  
+	private int replicates;
+  private int iterations;
+  
 	private JScrollBar startScrollBar;
-
+  private LoggingListPanel log;
 	private JLabel startFrameInd;
 	private JLabel endFrameInd;
 	private JScrollBar endScrollBar;
+	private JTextField repTxt;
+	private JTextField iterTxt;
+	
 
 	public OptimizePanel() {
 		super();
@@ -141,6 +147,17 @@ public class OptimizePanel extends JPanel {
 			public void valueChanged(ListSelectionEvent e) {
 
 				FittedMotions motion = OptimizePanel.this.motionsList.getSelectedValue();
+				
+				if (motion.fittedModel != null) {
+				  OptimizePanel.this.plotPanel.objmeans = motion.fittedModel.objMeans;
+          OptimizePanel.this.plotPanel.objmins = motion.fittedModel.objMins; 
+          OptimizePanel.this.plotPanel.objmaxs = motion.fittedModel.objMaxs; 
+          OptimizePanel.this.plotPanel.iters = motion.fittedModel.acceptedIter; 
+				  
+				  OptimizePanel.this.plotPanel.showFittingProfiles = true;
+				} else {
+				  OptimizePanel.this.plotPanel.showFittingProfiles = false;
+				}
 
 				OptimizePanel.this.plotPanel.yData = motion.motions.getV_motion();
 
@@ -241,7 +258,7 @@ public class OptimizePanel extends JPanel {
 			}
 		});
 
-		JButton optimButton = new JButton("Optimize");
+		JButton optimButton = new JButton("Fit data");
 
 		optimButton.addActionListener(new ActionListener() {
 
@@ -249,7 +266,11 @@ public class OptimizePanel extends JPanel {
 			public void actionPerformed(ActionEvent e) {
 
 				int[] selIdx = OptimizePanel.this.motionsList.getSelectedIndices();
+				
+				int replicates = 10;
 
+				int iterations = 5000;
+				
 				for (int i : selIdx) {
 
 					FittedMotions fm = motionsList.getModel().getElementAt(i);
@@ -266,9 +287,9 @@ public class OptimizePanel extends JPanel {
 
 					List<CosineModel> models = new ArrayList<>();
 
-					ModelEvaluator me = new ModelEvaluator(100, x, y);
+					ModelEvaluator me = new ModelEvaluator(iterations, x, y);
 
-					for (int j = 0; j < 100; j++) {
+					for (int j = 0; j < replicates; j++) {
 						CosineModel cm = me.optimize();
 						models.add(cm);
 					}
@@ -282,15 +303,16 @@ public class OptimizePanel extends JPanel {
 						meanPer += m.getPeriod();
 						meanPha += m.getPhase();
 					}
-					meanPer /= 100;
-					meanPha /= 100;
+					
+					meanPer /= replicates;
+					meanPha /= replicates;
 
 					for (CosineModel m : models) {
 						stdPer += Math.pow(m.getPeriod() - meanPer, 2);
 						stdPha += Math.pow(m.getPhase() - meanPha, 2);
 					}
-					stdPer = Math.sqrt(stdPer) / 100;
-					stdPha = Math.sqrt(stdPha) / 100;
+					stdPer = Math.sqrt(stdPer) / replicates;
+					stdPha = Math.sqrt(stdPha) / replicates;
 
 					CosineFitResult r = new CosineFitResult();
 
@@ -299,6 +321,58 @@ public class OptimizePanel extends JPanel {
 					r.stdPeriod = stdPer;
 					r.stdPhase = stdPha;
 
+          double[][] objProfile = new double[5][50];
+	        
+          int maxAcceptedIteration = 0;
+          for (CosineModel m : models) {
+            for (int iter : m.getAcceptedIterations()) {
+              maxAcceptedIteration = Math.max(maxAcceptedIteration, iter);
+            }
+          }
+          
+          
+          maxAcceptedIteration++;
+          double cellSize = maxAcceptedIteration / 50;
+          
+          for (int jj = 0 ; jj <50 ; jj++) {
+
+            objProfile[0][jj] = (int)((jj+1) * cellSize);  // Iteration range 
+            objProfile[1][jj] = Double.MAX_VALUE;  // Min Objective Value
+            objProfile[2][jj] = 0;  // Mean Objective Value
+            objProfile[3][jj] = 0;  // Max Objective Value
+            objProfile[4][jj] = 0;  // counter
+              
+          }
+          
+          for (CosineModel m : models) {
+            for (int k = 0; k< m.getAcceptedIterations().length; k++) {
+              double oValue = m.getObjectiveSeries()[k];
+              int iter = m.getAcceptedIterations()[k];
+
+              int rangeIndex = (int)(iter / cellSize);
+              rangeIndex = Math.min(50-1, rangeIndex);
+              
+              objProfile[1][rangeIndex] = Math.min(objProfile[1][rangeIndex], oValue);
+              objProfile[2][rangeIndex] += oValue;
+              objProfile[3][rangeIndex] = Math.max(objProfile[3][rangeIndex], oValue);
+              objProfile[4][rangeIndex] = objProfile[4][rangeIndex] + 1;
+              
+            }
+          }
+          
+          for (int jj = 0 ; jj <50 ; jj++) {
+            if (objProfile[4][jj] > 0) {
+              objProfile[2][jj] = objProfile[2][jj] / objProfile[4][jj];
+            } else {
+              objProfile[2][jj] = -1;
+            }
+          }
+          
+          r.objMaxs  = objProfile[3];
+          r.objMeans = objProfile[2];
+          r.objMins  = objProfile[1];
+          r.acceptedIter = objProfile[0];
+					
 					motionsList.getModel().getElementAt(i).fittedModel = r;
 
 					motionsList.updateUI();
@@ -308,12 +382,12 @@ public class OptimizePanel extends JPanel {
 			}
 		});
 
-		JButton saveButton = new JButton("Guardar");
+		JButton saveButton = new JButton("Save");
 
-		layout.columnWidths = new int[] { 50, 100, 40, 50, 50 };
-		layout.rowHeights = new int[] { 20, 20 };
-		layout.columnWeights = new double[] { 0, 1, 0, 0, 0 };
-		layout.rowWeights = new double[] { 1, 1 };
+		layout.columnWidths = new int[] { 50, 100, 30, 50, 50, 50, 50 };
+		layout.rowHeights = new int[] { 20, 20, 100 };
+		layout.columnWeights = new double[] { 0, 1, 0, 0, 0 , 0, 0 };
+		layout.rowWeights = new double[] { 0, 0, 1 };
 
 		c.insets = new Insets(5, 5, 5, 5);
 		c.fill = GridBagConstraints.BOTH;
@@ -328,7 +402,6 @@ public class OptimizePanel extends JPanel {
 
 		c.gridx = 1;
 		c.gridy = 0;
-
 		optionsPanel.add(startScrollBar, c);
 
 		c.gridy = 1;
@@ -344,19 +417,52 @@ public class OptimizePanel extends JPanel {
 		c.gridx = 2;
 		optionsPanel.add(this.endFrameInd, c);
 
+    c.gridy = 0;
+    c.gridx = 3;
+    c.gridheight = 1;   
+    optionsPanel.add(new JLabel("Replicates:"), c);
+
+    c.gridy = 1;
+    c.gridx = 3;
+    c.gridheight = 1;   
+    optionsPanel.add(new JLabel("Iterations"), c);
+		
+		this.repTxt = new JTextField("100");
+    c.gridy = 0;
+    c.gridx = 4;
+    c.gridheight = 1;   
+    optionsPanel.add(this.repTxt, c);
+
+    this.iterTxt = new JTextField("10000");
+    c.gridy = 1;
+    c.gridx = 4;
+    c.gridheight = 1;   
+    optionsPanel.add(this.iterTxt, c);
+		
 		c.gridy = 0;
-		c.gridx = 3;
-		c.gridheight = 2;
+		c.gridx = 5;
+		c.gridheight = 2;		
 		optionsPanel.add(optimButton, c);
 
 		c.gridy = 0;
-		c.gridx = 4;
+		c.gridx = 6;
 		c.gridheight = 2;
 		optionsPanel.add(saveButton, c);
+
+    c.gridy = 2;
+    c.gridx = 0;
+    c.gridheight = 1;
+    c.gridwidth=7;
+    
+    this.log = new LoggingListPanel(30);
+    
+		optionsPanel.add(new JScrollPane(this.log), c);
 
 		JSplitPane jSplitPane = new JSplitPane();
 		jSplitPane.setLeftComponent(listPanel);
 		jSplitPane.setRightComponent(this.plotPanel);
+		
+		
 		this.add(jSplitPane, BorderLayout.CENTER);
 
 		this.add(optionsPanel, BorderLayout.SOUTH);
@@ -404,7 +510,9 @@ public class OptimizePanel extends JPanel {
 
 	public void showGroupAverages() {
 
-		Map<Integer, List<Double>> meansByGroup = new HashMap<>();
+		@SuppressWarnings("unused")
+    Map<Integer, List<Double>> meansByGroup = new HashMap<>();
+		// TODO calcular la media por grupos
 
 		for (int i = 0; i < this.motionsList.getModel().getSize(); i++) {
 

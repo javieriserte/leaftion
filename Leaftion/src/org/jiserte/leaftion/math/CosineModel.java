@@ -6,8 +6,26 @@ public class CosineModel {
 	
 	private double[] vars;
 	private double[] maxChanges;
+  private double[] objectiveSeries;
+	private int[] acceptedIterations;
 	
-	public CosineModel(double amplitude, double phase, double period) {
+	public double[] getObjectiveSeries() {
+    return objectiveSeries;
+  }
+
+  public void setObjectiveSeries(double[] objectiveSeries) {
+    this.objectiveSeries = objectiveSeries;
+  }
+
+  public int[] getAcceptedIterations() {
+    return acceptedIterations;
+  }
+
+  public void setAcceptedIterations(int[] acceptedIterations) {
+    this.acceptedIterations = acceptedIterations;
+  }
+
+  public CosineModel(double amplitude, double phase, double period) {
 		super();
 		this.vars = new double[] {amplitude, phase,period};
 		this.maxChanges = new double[] {0.05, (1.0/24), 1.0};

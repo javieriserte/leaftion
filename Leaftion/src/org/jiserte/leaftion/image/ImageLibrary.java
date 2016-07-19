@@ -58,6 +58,12 @@ public class ImageLibrary {
     return this.getCurrentImage();
   }
 
+
+  public BufferedImage imageAt(int index) {
+    this.currentImageIndex = index;
+    return this.getCurrentImage();
+  }
+  
   public File[] getImageFiles() {
     return imageFiles;
   }

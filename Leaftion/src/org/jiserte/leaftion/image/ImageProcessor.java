@@ -6,8 +6,6 @@ import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.util.List;
 
-import org.jiserte.leaftion.events.ProcessingFramesListener;
-
 public class ImageProcessor {
   
   private double scaleFactor;

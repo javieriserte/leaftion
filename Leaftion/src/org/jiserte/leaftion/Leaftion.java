@@ -13,36 +13,42 @@ import java.awt.event.ItemListener;
 import java.awt.event.TextEvent;
 import java.awt.event.TextListener;
 import java.awt.image.BufferedImage;
-import java.beans.FeatureDescriptor;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
+import javax.imageio.ImageIO;
 import javax.swing.AbstractAction;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
-import javax.swing.JList;
 import javax.swing.JOptionPane;
-import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
 import javax.swing.JToolBar;
 import javax.swing.KeyStroke;
+import javax.swing.ListSelectionModel;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.WindowConstants;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+
 import org.jiserte.leaftion.events.ProcessingFramesEvent;
 import org.jiserte.leaftion.events.ProcessingFramesListener;
 import org.jiserte.leaftion.image.ImageLibrary;
+import org.jiserte.leaftion.logpanel.LogItem;
+import org.jiserte.leaftion.logpanel.LoggingListPanel;
 import org.jiserte.leaftion.math.MotionEstimator;
 import org.jiserte.leaftion.math.Motions;
+import org.jiserte.leaftion.thumbimagelist.ThumbImageList;
 import org.jiserte.multiselectimagepanel.MultiSelectImagePanel;
 
 public class Leaftion extends JFrame {
@@ -56,8 +62,6 @@ public class Leaftion extends JFrame {
   // Instance variables
   private File imageFolder = null;
   private ImageLibrary library;
-  private String[] logContent;
-  private int logContentIndex;
   private Locale locale;
   private List<Motions> motionDetectionResults;
   // ------------------------------------------------------------------------ //
@@ -66,7 +70,6 @@ public class Leaftion extends JFrame {
   // Components
   private JLabel currentFolderLabel;
   private MultiSelectImagePanel imagePanel;
-  private JList<String> log;
   private JButton buttonBright;
   private JButton preButton;
   private JButton nextButton;
@@ -77,8 +80,12 @@ public class Leaftion extends JFrame {
   private JComboBox<String> localeComboBox;
   private JButton optimButton;
   private TextField intervalTxt;
-
+  private LoggingListPanel log;
+  private JButton saveButton;
+  private ThumbImageList thumbnails;
   // ------------------------------------------------------------------------ //
+
+
 
   public static void main(String[] args) {
 
@@ -104,7 +111,7 @@ public class Leaftion extends JFrame {
       System.out.println(e);
     }
   }
-  
+
   public Leaftion() {
     super();
     this.motionDetectionResults = new ArrayList<>();
@@ -114,12 +121,12 @@ public class Leaftion extends JFrame {
 
     // ---------------------------------------------------------------------- //
     // Define variables comunes
-    Dimension sepDimension = new Dimension(15, 10);
+    Dimension sepDimension = new Dimension(7, 10);
     // ---------------------------------------------------------------------- //
 
     // ---------------------------------------------------------------------- //
     // Define el label para mostrar el nombre de la carpeta
-    this.currentFolderLabel = new JLabel("Ninguna carpeta elegida");
+    this.currentFolderLabel = new JLabel("No folder selected");
     currentFolderLabel.setMinimumSize(new Dimension(150, 50));
     currentFolderLabel.setPreferredSize(new Dimension(250, 50));
     currentFolderLabel.setMaximumSize(new Dimension(250, 50));
@@ -127,97 +134,30 @@ public class Leaftion extends JFrame {
 
     // ---------------------------------------------------------------------- //
     // Define el botón para buscar la carpeta de imágenes
-    JButton button = new JButton(UIManager.getIcon("FileView.directoryIcon"));
-    button.addActionListener(new ActionListener() {
-      @Override
-      public void actionPerformed(ActionEvent e) {
-        JFileChooser fc = new JFileChooser();
-        fc.setMultiSelectionEnabled(false);
-        fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-        fc.showOpenDialog(Leaftion.this);
-        File selectedFile = fc.getSelectedFile();
-        if (selectedFile != null) {
-          boolean foundImages = Leaftion.this.setImageFolder(selectedFile);
-          if (foundImages) {
-            Leaftion.this.addToLog("Se han econtrado "
-                + Leaftion.this.library.getImageFiles().length + " Imágenes!");
-            Leaftion.this.buttonBright.setEnabled(true);
-            Leaftion.this.preButton.setEnabled(true);
-            Leaftion.this.nextButton.setEnabled(true);
-            Leaftion.this.runButton.setEnabled(true);
-          } else {
-            Leaftion.this.addToLog("Error: No se han econtrado imágenes!");
-          }
-        }
-      }
-    });
-    button.setToolTipText("Define la carpeta con las imágenes");
+    JButton button = new JButton(  new ImageIcon("resources/icons/folder.32.png"));
+    button.addActionListener(new OpenFolderButtonActionListener());
+    button.setToolTipText("Select the images folder");
     // ---------------------------------------------------------------------- //
 
     // ---------------------------------------------------------------------- //
     // Define el botón para mostrar las imágenes con el efecto brillante
-    this.buttonBright = new JButton("Brillante");
-
+    this.buttonBright = new JButton(new ImageIcon("resources/icons/Bright.32.png"));
     buttonBright.setEnabled(false);
-
-    buttonBright.addActionListener(new ActionListener() {
-      @Override
-      public void actionPerformed(ActionEvent e) {
-
-        BufferedImage im = Leaftion.this.library.getBrightCompositeImage();
-        if (im == null) {
-
-          Runnable runnable = new Runnable() {
-            @Override
-            public void run() {
-              Leaftion.this.library.makeBrightComposite();
-              BufferedImage img = Leaftion.this.library
-                  .getBrightCompositeImage();
-              Leaftion.this.imagePanel.setImage(img);
-            }
-          };
-
-          Thread t = new Thread(runnable);
-          t.start();
-          return;
-        } else {
-          Leaftion.this.imagePanel.setImage(im);
-        }
-
-      }
-    });
+    buttonBright.addActionListener(new BrightButtonActionListener());
     // ---------------------------------------------------------------------- //
 
     // ---------------------------------------------------------------------- //
     // Define botones para buscar entre imágenes
     this.preButton = new JButton("<<");
     this.preButton.setEnabled(false);
-    this.preButton.addActionListener(new ActionListener() {
-      @Override
-      public void actionPerformed(ActionEvent e) {
-        BufferedImage im = Leaftion.this.library.previous();
-        if (im != null) {
-          Leaftion.this.imagePanel.setImage(im);
-          String counter = String
-              .valueOf(Leaftion.this.library.getImageIndex());
-          Leaftion.this.counterLabel.setText(counter);
-        }
-      }
-    });
+    this.preButton.addActionListener(new NavigateImageActionListener());
+    this.preButton.setActionCommand("PREVIOUS");
+    
     this.nextButton = new JButton(">>");
     this.nextButton.setEnabled(false);
-    this.nextButton.addActionListener(new ActionListener() {
-      @Override
-      public void actionPerformed(ActionEvent e) {
-        BufferedImage im = Leaftion.this.library.next();
-        if (im != null) {
-          Leaftion.this.imagePanel.setImage(im);
-          String counter = String
-              .valueOf(Leaftion.this.library.getImageIndex());
-          Leaftion.this.counterLabel.setText(counter);
-        }
-      }
-    });
+    this.nextButton.addActionListener(new NavigateImageActionListener());
+    this.nextButton.setActionCommand("NEXT");
+    
     this.counterLabel = new JLabel("0");
     counterLabel.setMinimumSize(new Dimension(30, 50));
     counterLabel.setPreferredSize(new Dimension(50, 50));
@@ -226,225 +166,55 @@ public class Leaftion extends JFrame {
 
     // ---------------------------------------------------------------------- //
     // Define el botón para iniciar la ejecución
-    this.runButton = new JButton("Run!");
+    this.runButton = new JButton( new ImageIcon("resources/icons/run.32.png") );
     this.runButton.setEnabled(false);
 
-    runButton.addActionListener(new ActionListener() {
-
-      @Override
-      public void actionPerformed(ActionEvent e) {
-
-        MotionEstimator mest = new MotionEstimator();
-
-        List<Rectangle> regions = Leaftion.this.imagePanel.getRegions();
-        List<String> labels = Leaftion.this.imagePanel.getLabels();
-
-        Thread t = new Thread(new Runnable() {
-
-          @Override
-          public void run() {
-            List<List<BufferedImage>> imagesRegions = Leaftion.this.library
-                .cropRegions(regions);
-
-            if (imagesRegions.size() == 0) {
-              Leaftion.this.addToLog("Error: No regions defined!");
-              return;
-            }
-
-            List<Motions> motionList = new ArrayList<>();
-
-            Leaftion.this.addToLog("Estimating motions");
-            for (List<BufferedImage> images : imagesRegions) {
-              Motions motions = mest.estimateMotionInSeries(images);
-              motionList.add(motions);
-            }
-            Leaftion.this.modifyLastLog("Estimating motions Done");
-
-            Leaftion.this.motionDetectionResults = motionList;
-
-             String directory = null;
-             String file = null;
-            
-             while (true) {
-            
-             FileDialog out = new FileDialog(Leaftion.this,
-             "Elija archivo de salida", FileDialog.SAVE);
-             out.setVisible(true);
-            
-             directory = out.getDirectory();
-             file = out.getFile();
-            
-             if (directory == null || file == null) {
-             Leaftion.this
-             .addToLog("Error: File not found or save cancelled");
-            
-             int input = JOptionPane.showConfirmDialog(Leaftion.this,
-             "No ha seleccionado un archivo para guardar los resultados.\nSi no lo hace los datos se perderán.",
-             "Seleccione una opción",
-             JOptionPane.OK_CANCEL_OPTION,
-             JOptionPane.WARNING_MESSAGE);
-            
-             if (input == JOptionPane.CANCEL_OPTION) {
-             return;
-             }
-            
-             } else {
-             break;
-             }
-             }
-            
-             File outfile = new File(directory, file);
-            
-             PrintStream os;
-             try {
-             os = new PrintStream(outfile);
-            
-             boolean firstField = true;
-             for (int i = 0; i < labels.size(); i++) {
-             if (!firstField) {
-             os.print(";");
-             }
-             os.print(labels.get(i));
-             firstField = false;
-             }
-             os.println("");
-            
-             for (int i = 0; i < motionList.get(0).getV_motion().length; i++)
-             {
-            
-             firstField = true;
-             for (int j = 0; j < motionList.size(); j++) {
-             if (!firstField) {
-             os.print(";");
-             }
-             os.print(String.format(Leaftion.this.getLocale(), "%8.5f",
-             motionList.get(j).getV_motion()[i]));
-             firstField = false;
-             }
-             os.println("");
-            
-             }
-             os.close();
-            
-             Leaftion.this.addToLog(
-             "Results Saved on file: " +
-             outfile.getAbsolutePath() );
-            
-             } catch (FileNotFoundException e1) {
-             e1.printStackTrace();
-             }
-          }
-        });
-
-        t.start();
-
-      }
-    });
+    runButton.addActionListener(new RunButtonActionListener());
     // ---------------------------------------------------------------------- //
 
     // ---------------------------------------------------------------------- //
     // Selecciona el Locale
     this.localeLabel = new JLabel("Locale:");
     this.localeLabel
-        .setToolTipText("Elija el idioma para guardar los resultados");
+        .setToolTipText("Choose Locale for output data");
     this.localeComboBox = new JComboBox<>(new String[] { "es_AR", "en_US" });
     this.localeComboBox.setPreferredSize(new Dimension(80, 25));
     this.localeComboBox.setMaximumSize(new Dimension(80, 25));
 
-    this.localeComboBox.addItemListener(new ItemListener() {
-
-      @Override
-      public void itemStateChanged(ItemEvent e) {
-        if (e.getStateChange() == ItemEvent.SELECTED) {
-          Leaftion.this.setLocale((String) e.getItem());
-        }
-
-      }
-    });
-
+    this.localeComboBox.addItemListener(new LocaleSelectionItemListener());
     // ---------------------------------------------------------------------- //
 
-    this.optimButton = new JButton("Opt!");
+    
+    // ---------------------------------------------------------------------- //
+    // Show fitting Panel Button
+    this.optimButton = new JButton(
+        new ImageIcon("resources/icons/cosine.32.png"));
+    this.optimButton.addActionListener(new OptimizeButtonActionListener());
+    // ---------------------------------------------------------------------- //
 
-    this.optimButton.addActionListener(new ActionListener() {
-
-      @Override
-      public void actionPerformed(ActionEvent e) {
-
-//        if (Leaftion.this.motionDetectionResults.isEmpty()) {
-//          
-//          JOptionPane.showMessageDialog(Leaftion.this,
-//              "No hay resultados de estimación de movimiento", "Error", 
-//              JOptionPane.ERROR_MESSAGE);
-//          return;
-//        }
-
-        
-        
-        SwingUtilities.invokeLater(new Runnable() {
-
-          @Override
-          public void run() {
-
-            JFrame optFrame = new JFrame();
-            OptimizePanel optimizePanel = new OptimizePanel();
-            FittedMotions[] fmot = new FittedMotions[
-              Leaftion.this.motionDetectionResults.size()];
-            
-            optimizePanel.setInterval(
-                Double.parseDouble(intervalTxt.getText()));
-            
-            for (int i = 0; i< fmot.length; i++) {
-              fmot[i] = new FittedMotions();
-              fmot[i].fittedModel = null;
-              fmot[i].label = Leaftion.this.imagePanel.getLabels().get(i);
-              fmot[i].motions = Leaftion.this.motionDetectionResults.get(i);
-            }
-
-            optimizePanel.setMotionEstimation(fmot);
-            optFrame.add(optimizePanel);
-            optFrame.setVisible(true);
-            optFrame.setPreferredSize(new Dimension(1024, 768));
-            optFrame.setSize(new Dimension(1024, 768));
-            optFrame.setLocationRelativeTo(null);
-            optFrame.setTitle("Optimize");
-            optFrame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-            optFrame.pack();
-
-          }
-        });
-
-      }
-    });
-
+    // ---------------------------------------------------------------------- //
     this.intervalTxt = new TextField();
     this.intervalTxt.setEditable(true);
     this.intervalTxt.setText("1.0");
-    this.intervalTxt.addTextListener(new TextListener() {
-
-      @Override
-      public void textValueChanged(TextEvent e) {
-
-        String text = intervalTxt.getText();
-        if (text.trim().length() > 0) {
-          try {
-            Double.parseDouble(text);
-          } catch (Exception ex) {
-            JOptionPane.showMessageDialog(null, "Ingrese un número");
-            intervalTxt.setText("1.0");
-          }
-        }
-      }
-    });
+    this.intervalTxt.addTextListener(new ValidateIntervalTextListener());
     this.intervalTxt.setPreferredSize(new Dimension(40, 20));
     this.intervalTxt.setMaximumSize(new Dimension(40, 20));
 
     // ---------------------------------------------------------------------- //
+    // Define Save button
+    this.saveButton = new JButton(
+        new ImageIcon("resources/icons/save.32.png"));
+    saveButton.addActionListener(new SaveButtonActionListener());
+    // ---------------------------------------------------------------------- //
+
+    
+    // ---------------------------------------------------------------------- //
     // Define la toolbar
     JToolBar tb = new JToolBar();
 
-    tb.addSeparator(new Dimension(10, 0));
+    tb.addSeparator(new Dimension(5, 0));
     tb.add(button);
+    tb.addSeparator(new Dimension(3, 0));
     tb.add(this.currentFolderLabel);
     tb.addSeparator(sepDimension);
     tb.add(buttonBright);
@@ -459,109 +229,86 @@ public class Leaftion extends JFrame {
     tb.add(this.localeLabel);
     tb.add(this.localeComboBox);
     tb.addSeparator(sepDimension);
-    tb.add(new JLabel("Intervalo (hs):"));
+    tb.add(this.saveButton);
+    tb.addSeparator(sepDimension);
+    tb.add(new JLabel("Interval (h):"));
     tb.add(this.intervalTxt);
     tb.addSeparator(sepDimension);
     tb.add(this.optimButton);
 
     this.localeComboBox.setSelectedIndex(0);
-    this.setLocale(this.localeComboBox.getItemAt(0));
+    this.setLocale( this.localeComboBox.getItemAt(0) );
 
-    tb.setRollover(true);
-    tb.setFloatable(false);
-    tb.setPreferredSize(new Dimension(1, 35));
-    tb.setMargin(new Insets(2, 2, 2, 2));
+    tb.setRollover( true );
+    tb.setFloatable( false );
+    tb.setPreferredSize( new Dimension(1, 36) );
+    tb.setMargin( new Insets(2, 2, 2, 2) );
     this.add(tb, BorderLayout.PAGE_START);
     // ---------------------------------------------------------------------- //
 
     // ---------------------------------------------------------------------- //
-    this.imagePanel = new MultiSelectImagePanel();
-    this.add(new JScrollPane(this.imagePanel), BorderLayout.CENTER);
+    // Thumbnails list
+    this.thumbnails = new ThumbImageList();
+    this.thumbnails.setMinimumSize(new Dimension(100,100));
+    this.thumbnails.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+    this.thumbnails.addListSelectionListener(new ListSelectionListener() {
+      
+      @Override
+      public void valueChanged(ListSelectionEvent e) {
+        try {
+          int index = Leaftion.this.thumbnails.getSelectedIndex();
+          BufferedImage im = Leaftion.this.library.imageAt(index);
+          Leaftion.this.imagePanel.setImage(im);
+          Leaftion.this.counterLabel.setText(String.valueOf(index+1));
+        } catch (Exception ex) {
+        
+        }
+      }
+    } );
+    JScrollPane jspThumbs = new JScrollPane(this.thumbnails);
+    // ---------------------------------------------------------------------- //
 
+    // ---------------------------------------------------------------------- //
+    // image panel
+    this.imagePanel = new MultiSelectImagePanel();
+    JScrollPane jspIm = new JScrollPane(this.imagePanel);
+    // ---------------------------------------------------------------------- //
+
+    // ---------------------------------------------------------------------- //
+    // image panel
+    JSplitPane jSplitPane = new JSplitPane();
+    jSplitPane.setRightComponent(jspIm);
+    jSplitPane.setLeftComponent(jspThumbs);
+    this.add(jSplitPane, BorderLayout.CENTER);
+    // ---------------------------------------------------------------------- //
+    
+    
+    // ---------------------------------------------------------------------- //
+    // Add Key bindings for image navigation
     this.imagePanel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
         .put(KeyStroke.getKeyStroke("control LEFT"), "previousFrame");
     this.imagePanel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
         .put(KeyStroke.getKeyStroke("control RIGHT"), "nextFrame");
 
-    AbstractAction preFrameAction = new AbstractAction() {
-      private static final long serialVersionUID = -8050051488649477806L;
+    AbstractAction preFrameAction = new NavigateAction(
+        NavigateAction.PREVIOUS_IMAGE_ACTION);
 
-      @Override
-      public void actionPerformed(ActionEvent e) {
-        ImageLibrary library = Leaftion.this.library;
-        if (library != null) {
-          BufferedImage im = library.previous();
-          if (im != null) {
-            Leaftion.this.imagePanel.setImage(im);
-            String counter = String.valueOf(library.getImageIndex());
-            Leaftion.this.counterLabel.setText(counter);
-          }
-        }
-      }
-    };
-
-    AbstractAction nextFrameAction = new AbstractAction() {
-      private static final long serialVersionUID = 559853393227529303L;
-
-      @Override
-      public void actionPerformed(ActionEvent e) {
-        ImageLibrary library = Leaftion.this.library;
-        if (library != null) {
-          BufferedImage im = Leaftion.this.library.next();
-          if (im != null) {
-            Leaftion.this.imagePanel.setImage(im);
-            String counter = String
-                .valueOf(Leaftion.this.library.getImageIndex());
-            Leaftion.this.counterLabel.setText(counter);
-          }
-        }
-      }
-    };
+    AbstractAction nextFrameAction = new NavigateAction(
+        NavigateAction.NEXT_IMAGE_ACTION);
 
     preFrameAction.setEnabled(true);
     this.imagePanel.getActionMap().put("previousFrame", preFrameAction);
     this.imagePanel.getActionMap().put("nextFrame", nextFrameAction);
-
     // ---------------------------------------------------------------------- //
 
     // ---------------------------------------------------------------------- //
-    // Log
-    this.log = new JList<>();
-    this.logContent = new String[100];
+    // Log Panel
+    this.log = new LoggingListPanel(100);
     this.logScrollPane = new JScrollPane(this.log);
-    this.addToLog("Welcome!");
+    this.log.addMessage(new LogItem("Welcome!", LoggingListPanel.NORMAL_TYPE));
     this.add(this.logScrollPane, BorderLayout.SOUTH);
     // ---------------------------------------------------------------------- //
-
-  }
-
-  private void addToLog(String value) {
-
-    if (this.logContentIndex >= this.logContent.length) {
-      this.logContentIndex = this.logContent.length - 1;
-      for (int i = 1; i < this.logContent.length; i++) {
-        this.logContent[i - 1] = this.logContent[i];
-      }
-    }
-
-    this.logContent[this.logContentIndex] = "> " + value;
-    this.log.setListData(
-        Arrays.copyOfRange(this.logContent, 0, this.logContentIndex + 1));
-    this.logContentIndex++;
-    this.validate();
-    JScrollBar vertical = this.logScrollPane.getVerticalScrollBar();
-    vertical.setValue(vertical.getMaximum() + 1);
-
-  }
-
-  private void modifyLastLog(String value) {
-
-    this.logContent[this.logContentIndex - 1] = "> " + value;
-    this.log.setListData(
-        Arrays.copyOfRange(this.logContent, 0, this.logContentIndex));
-    this.validate();
-    JScrollBar vertical = this.logScrollPane.getVerticalScrollBar();
-    vertical.setValue(vertical.getMaximum() + 1);
+    
 
   }
 
@@ -570,84 +317,11 @@ public class Leaftion extends JFrame {
     this.imageFolder = selectedFile;
     this.currentFolderLabel.setText(this.imageFolder.getAbsolutePath());
     this.library = new ImageLibrary();
-    this.library
-        .addCropImageProccessingListener(new ProcessingFramesListener() {
+    this.library.addCropImageProccessingListener(
+        new CroppingProccessFrameListener());
 
-          @Override
-          public void updateFrame(ProcessingFramesEvent e) {
-            SwingUtilities.invokeLater(new Runnable() {
-              @Override
-              public void run() {
-                if (e.currentFrame == 1) {
-                  Leaftion.this.addToLog("Crop Image (" + e.currentFrame + "/"
-                      + e.numberOfFrames + ")");
-                } else {
-                  Leaftion.this.modifyLastLog("Crop Image (" + e.currentFrame
-                      + "/" + e.numberOfFrames + ")");
-                }
-              }
-            });
-          }
-
-          @Override
-          public void startProccess(ProcessingFramesEvent e) {
-            SwingUtilities.invokeLater(new Runnable() {
-              @Override
-              public void run() {
-                Leaftion.this.addToLog("Start Cropping Images");
-              }
-            });
-          }
-
-          @Override
-          public void finnishProccess(ProcessingFramesEvent e) {
-            // SwingUtilities.invokeLater(new Runnable() {
-            // @Override
-            // public void run() {
-            Leaftion.this.addToLog("Cropping Done");
-            // }
-            // });
-          }
-        });
-
-    this.library
-        .addBrightImageProccesingListener(new ProcessingFramesListener() {
-          @Override
-          public void updateFrame(ProcessingFramesEvent e) {
-            SwingUtilities.invokeLater(new Runnable() {
-              @Override
-              public void run() {
-                if (e.currentFrame == 1) {
-                  Leaftion.this.addToLog("Making Bright Image ("
-                      + e.currentFrame + "/" + e.numberOfFrames + ")");
-                } else {
-                  Leaftion.this.modifyLastLog("Making Bright Image ("
-                      + e.currentFrame + "/" + e.numberOfFrames + ")");
-                }
-              }
-            });
-          }
-
-          @Override
-          public void startProccess(ProcessingFramesEvent e) {
-            SwingUtilities.invokeLater(new Runnable() {
-              @Override
-              public void run() {
-                Leaftion.this.addToLog("Start Bright Image");
-              }
-            });
-          }
-
-          @Override
-          public void finnishProccess(ProcessingFramesEvent e) {
-            SwingUtilities.invokeLater(new Runnable() {
-              @Override
-              public void run() {
-                Leaftion.this.addToLog("Bright Image Done");
-              }
-            });
-          }
-        });
+    this.library.addBrightImageProccesingListener(
+        new BrightProccessFrameListener());
 
     this.library.getImageFilesInFolder(this.imageFolder);
 
@@ -673,5 +347,438 @@ public class Leaftion extends JFrame {
     String[] a = item.split("_");
     this.locale = new Locale(a[0], a[1]);
   }
+  
+  // ------------------------------------------------------------------------ //
+  // Auxiliary classes
+  
+  class NavigateAction extends AbstractAction {
+    
+    private static final long serialVersionUID = -8050051488649477806L;
+    private static final int NEXT_IMAGE_ACTION = 0;
+    private static final int PREVIOUS_IMAGE_ACTION = 1;
+    private int actionType;
+    
+    public NavigateAction(int actionType) {
+      super();
+      this.actionType = actionType;
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+      ImageLibrary library = Leaftion.this.library;
+      if (library != null) {
+        BufferedImage im = null; 
+        switch (this.actionType) {
+          case PREVIOUS_IMAGE_ACTION:
+            im = library.previous();
+            break;
+          case NEXT_IMAGE_ACTION:
+            im = library.next();
+            break;
+          default:
+            return;
+        } 
+        if (im != null) {
+          Leaftion.this.imagePanel.setImage(im);
+          String counter = String.valueOf(library.getImageIndex());
+          Leaftion.this.counterLabel.setText(counter);
+        }
+      }
+    }
+  }
+  
+  class ValidateIntervalTextListener implements TextListener {
+    @Override
+    public void textValueChanged(TextEvent e) {
+      String text = intervalTxt.getText();
+      if (text.trim().length() > 0) {
+        try {
+          Double.parseDouble(text);
+        } catch (Exception ex) {
+          JOptionPane.showMessageDialog(null, "Enter a number.");
+          intervalTxt.setText("1.0");
+        }
+      }
+    }
+  }
+  
+  class LocaleSelectionItemListener implements ItemListener {
+    @Override
+    public void itemStateChanged(ItemEvent e) {
+      if (e.getStateChange() == ItemEvent.SELECTED) {
+        Leaftion.this.setLocale((String) e.getItem());
+      }
+    }
+  }
+  
+  class NavigateImageActionListener implements ActionListener {
+    @Override
+    public void actionPerformed(ActionEvent e) {
+      BufferedImage im = null;
+      if (e.getActionCommand()=="NEXT") {
+        im = Leaftion.this.library.next();
+      } else {
+        im = Leaftion.this.library.previous();
+      }
+      if (im != null) {
+        Leaftion.this.imagePanel.setImage(im);
+        String counter = String
+            .valueOf(Leaftion.this.library.getImageIndex());
+        Leaftion.this.counterLabel.setText(counter);
+      }
+    }
+  }
+  class BrightButtonActionListener implements ActionListener {
+    @Override
+    public void actionPerformed(ActionEvent e) {
+
+      BufferedImage im = Leaftion.this.library.getBrightCompositeImage();
+      if (im == null) {
+
+        Runnable runnable = new Runnable() {
+          @Override
+          public void run() {
+            Leaftion.this.library.makeBrightComposite();
+            BufferedImage img = Leaftion.this.library
+                .getBrightCompositeImage();
+            Leaftion.this.imagePanel.setImage(img);
+          }
+        };
+
+        Thread t = new Thread(runnable);
+        t.start();
+        return;
+      } else {
+        Leaftion.this.imagePanel.setImage(im);
+      }
+
+    }
+  }
+  
+  class OpenFolderButtonActionListener implements ActionListener {
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+      
+      JFileChooser fc = new JFileChooser();
+      
+      fc.setMultiSelectionEnabled(false);
+      fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+      
+      fc.showOpenDialog(Leaftion.this);
+      
+      File selectedFile = fc.getSelectedFile();
+      
+      if (selectedFile != null) {
+        boolean foundImages = Leaftion.this.setImageFolder(selectedFile);
+        if (foundImages) {
+          LogItem msg = new LogItem(
+              Leaftion.this.library.getImageFiles().length + " Images Found",
+              LoggingListPanel.NORMAL_TYPE);
+          Leaftion.this.log.addMessage(msg);
+          Leaftion.this.thumbnails.loadImages(
+              Leaftion.this.library.getImageFiles());
+          Leaftion.this.buttonBright.setEnabled(true);
+          Leaftion.this.preButton.setEnabled(true);
+          Leaftion.this.nextButton.setEnabled(true);
+          Leaftion.this.runButton.setEnabled(true);
+        } else {
+          LogItem msg = new LogItem("No Images Found",
+              LoggingListPanel.ERROR_TYPE);
+          Leaftion.this.log.addMessage(msg);
+        }
+      }
+    }
+  }
+  
+  class SaveButtonActionListener implements ActionListener {
+
+    @Override
+    public void actionPerformed(ActionEvent event) {
+      
+      List<Motions> motionList = Leaftion.this.motionDetectionResults;
+      List<String>     labels = Leaftion.this.imagePanel.getLabels();
+      
+      if ( Leaftion.this.motionDetectionResults !=null &&
+          Leaftion.this.motionDetectionResults.size()>0)  {
+        
+        String directory = null;
+        String file = null;
+        
+        FileDialog out = new FileDialog(Leaftion.this,
+            "Select output file", FileDialog.SAVE);
+        out.setVisible(true);
+
+        directory = out.getDirectory();
+        file = out.getFile();
+        
+        if (directory == null || file == null) {
+          LogItem msg = new LogItem("File not found or save cancelled",
+              LoggingListPanel.WARNING_TYPE);
+          Leaftion.this.log.addMessage(msg);
+          return;
+        }
+        
+        File outfile = new File(directory, file);
+
+        PrintStream os;
+        try {
+          os = new PrintStream(outfile);
+
+          boolean firstField = true;
+          for (int i = 0; i < labels.size(); i++) {
+            if (!firstField) {
+              os.print(";");
+            }
+            os.print(labels.get(i));
+            firstField = false;
+          }
+          os.println("");
+
+          for (int i = 0; i < motionList.get(0).getV_motion().length; i++) {
+
+            firstField = true;
+            for (int j = 0; j < motionList.size(); j++) {
+              if (!firstField) {
+                os.print(";");
+              }
+              os.print(String.format(Leaftion.this.getLocale(), "%8.5f",
+                  motionList.get(j).getV_motion()[i]));
+              firstField = false;
+            }
+            os.println("");
+
+          }
+          os.close();
+
+          LogItem msg = new LogItem(
+              "Results Saved on file: " + outfile.getAbsolutePath(),
+              LoggingListPanel.NORMAL_TYPE);
+          Leaftion.this.log.addMessage(msg);
+
+        } catch (FileNotFoundException e1) {
+          e1.printStackTrace();
+        }
+        
+      }
+      
+    }
+    
+  }
+
+  class RunButtonActionListener implements ActionListener {
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+
+      MotionEstimator mest = new MotionEstimator();
+      List<Rectangle> regions = Leaftion.this.imagePanel.getRegions();
+
+      Thread t = new Thread(new Runnable() {
+
+        @Override
+        public void run() {
+          
+          // ---------------------------------------------------------------- //
+          // Get the regions
+          List<List<BufferedImage>> imagesRegions = Leaftion.this.library
+              .cropRegions(regions);
+          // ---------------------------------------------------------------- //
+
+          // ---------------------------------------------------------------- //
+          // Checl if there are regions defined
+          if (imagesRegions.size() == 0) {
+            LogItem msg = new LogItem("No regions defined!",
+                LoggingListPanel.ERROR_TYPE);
+            Leaftion.this.log.addMessage(msg);
+            return;
+          }
+          // ---------------------------------------------------------------- //
+
+
+          // ---------------------------------------------------------------- //
+          // Log start of motion estimation
+          LogItem msg = new LogItem("Estimating motions",
+              LoggingListPanel.NORMAL_TYPE);
+          Leaftion.this.log.addMessage(msg);
+          // ---------------------------------------------------------------- //
+
+          // ---------------------------------------------------------------- //
+          // Estimate motions
+          List<Motions> motionList = new ArrayList<>();
+          for (List<BufferedImage> images : imagesRegions) {
+            Motions motions = mest.estimateMotionInSeries(images);
+            motionList.add(motions);
+          }
+          Leaftion.this.motionDetectionResults = motionList;
+          // ---------------------------------------------------------------- //
+          
+          // ---------------------------------------------------------------- //
+          // Log End of estimation
+          msg = new LogItem("Estimating motions Done",
+              LoggingListPanel.NORMAL_TYPE);
+          Leaftion.this.log.addMessage(msg);
+          // ---------------------------------------------------------------- //
+        }
+      });
+
+      t.start();
+
+    }
+  }
+  
+  class OptimizeButtonActionListener implements ActionListener {
+
+    
+    private Motions dummyMotions() {
+
+      Motions m = new Motions();
+      
+      double[] mot = new double[300];
+      
+      for (int i = 0; i< 300; i++) {
+        mot[i] = 0.5 * Math.cos(2 * Math.PI * ( i + 2 ) / 24) + Math.random()*0.6 - 0.3;
+      }
+          
+      m.setV_motion(mot);
+      m.setH_motion(mot);
+      
+      return m;
+      
+    }
+    
+    @Override
+    public void actionPerformed(ActionEvent e) {
+
+      // if (Leaftion.this.motionDetectionResults.isEmpty()) {
+      //
+      // JOptionPane.showMessageDialog(Leaftion.this,
+      // "No hay resultados de estimación de movimiento", "Error",
+      // JOptionPane.ERROR_MESSAGE);
+      // return;
+      // }
+
+      SwingUtilities.invokeLater(new Runnable() {
+
+        @Override
+        public void run() {
+
+          JFrame optFrame = new JFrame();
+          OptimizePanel optimizePanel = new OptimizePanel();
+          
+          FittedMotions[] fmot = new FittedMotions[4];
+
+          optimizePanel
+              .setInterval(Double.parseDouble(intervalTxt.getText()));
+
+          for (int i = 0; i < 4; i++) {
+            fmot[i] = new FittedMotions();
+            fmot[i].fittedModel = null;
+            fmot[i].label = String.format("Region %d", i);
+            fmot[i].motions = dummyMotions();
+          }
+
+          optimizePanel.setMotionEstimation(fmot);
+          optFrame.add(optimizePanel);
+          optFrame.setVisible(true);
+          optFrame.setPreferredSize(new Dimension(1024, 768));
+          optFrame.setSize(new Dimension(1024, 768));
+          optFrame.setLocationRelativeTo(null);
+          optFrame.setTitle("Optimize");
+          optFrame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+          optFrame.pack();
+
+        }
+      });
+      
+
+        
+//        @Override
+//        public void run() {
+//
+//          JFrame optFrame = new JFrame();
+//          OptimizePanel optimizePanel = new OptimizePanel();
+//          
+//          FittedMotions[] fmot = new FittedMotions[
+//              Leaftion.this.motionDetectionResults.size()];
+//
+//          optimizePanel
+//              .setInterval(Double.parseDouble(intervalTxt.getText()));
+//
+//          for (int i = 0; i < fmot.length; i++) {
+//            fmot[i] = new FittedMotions();
+//            fmot[i].fittedModel = null;
+//            fmot[i].label = Leaftion.this.imagePanel.getLabels().get(i);
+//            fmot[i].motions = Leaftion.this.motionDetectionResults.get(i);
+//          }
+//
+//          optimizePanel.setMotionEstimation(fmot);
+//          optFrame.add(optimizePanel);
+//          optFrame.setVisible(true);
+//          optFrame.setPreferredSize(new Dimension(1024, 768));
+//          optFrame.setSize(new Dimension(1024, 768));
+//          optFrame.setLocationRelativeTo(null);
+//          optFrame.setTitle("Optimize");
+//          optFrame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+//          optFrame.pack();
+//
+//        }
+//      });
+
+    }
+  }
+  
+  class CroppingProccessFrameListener implements ProcessingFramesListener {
+
+    @Override
+    public void updateFrame(ProcessingFramesEvent e) {
+      LogItem msg = new LogItem(
+          "Crop Image (" + e.currentFrame + "/" + e.numberOfFrames + ")",
+          LoggingListPanel.NORMAL_TYPE);
+      if (e.currentFrame == 1) {
+        Leaftion.this.log.addMessage(msg);
+      } else {
+        Leaftion.this.log.updateMessage(msg);
+      }
+    }
+    @Override
+    public void startProccess(ProcessingFramesEvent e) {
+      Leaftion.this.log.addMessage(new LogItem("Start Cropping Images",
+          LoggingListPanel.NORMAL_TYPE));
+    }
+    @Override
+    public void finnishProccess(ProcessingFramesEvent e) {
+      Leaftion.this.log.addMessage(
+          new LogItem("Cropping Done", LoggingListPanel.NORMAL_TYPE));
+    }
+  }
+  
+  class BrightProccessFrameListener implements ProcessingFramesListener {
+    @Override
+    public void updateFrame(ProcessingFramesEvent e) {
+      LogItem msg = new LogItem("Making Bright Image (" + e.currentFrame
+          + "/" + e.numberOfFrames + ")", LoggingListPanel.NORMAL_TYPE);
+
+      if (e.currentFrame == 1) {
+        Leaftion.this.log.addMessage(msg);
+
+      } else {
+        Leaftion.this.log.updateMessage(msg);
+      }
+    }
+    @Override
+    public void startProccess(ProcessingFramesEvent e) {
+      LogItem msg = new LogItem("Start Bright Image",
+          LoggingListPanel.NORMAL_TYPE);
+      Leaftion.this.log.addMessage(msg);
+    }
+    @Override
+    public void finnishProccess(ProcessingFramesEvent e) {
+      LogItem msg = new LogItem("Bright Image Done",
+          LoggingListPanel.NORMAL_TYPE);
+      Leaftion.this.log.addMessage(msg);
+    }
+  }
+  // ------------------------------------------------------------------------ //
 
 }

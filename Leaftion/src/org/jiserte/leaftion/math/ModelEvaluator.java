@@ -1,12 +1,16 @@
 package org.jiserte.leaftion.math;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class ModelEvaluator {
 
-	private int iterations;
+  private int iterations;
 	
 	private double[] x;
 	private double[] y;
 	private double lastDiff;
+
 	
 	
 	public ModelEvaluator(int iterations, double[] x, double[] y) {
@@ -22,8 +26,9 @@ public class ModelEvaluator {
 		CosineModel model = new CosineModel();
 		
 		this.lastDiff = model.diff(x, y);
-		
-		int accepted = 0;
+
+		List<Double> objectiveSeries = new ArrayList<>();
+    List<Integer> acceptedItaration = new ArrayList<>(); 
 		
 		for (int i =0 ; i< this.iterations; i++) {
 			
@@ -32,13 +37,22 @@ public class ModelEvaluator {
 			double diff = newModel.diff(x, y);
 			
 			if (diff < this.lastDiff) {
-				model = newModel;
+
+			  model = newModel;
 				this.lastDiff = diff;
-				accepted ++;
-				System.out.println("Iter: "+ i + " Accepted: " + accepted + " Diff: " +diff);
-				
+				objectiveSeries.add(diff);
+				acceptedItaration.add(i);
+			
 			}
 			
+		}
+		
+		model.setAcceptedIterations(new int[acceptedItaration.size()]);
+		model.setObjectiveSeries(new double[objectiveSeries.size()]);
+		
+		for (int i = 0; i< objectiveSeries.size(); i ++) {
+		  model.getAcceptedIterations()[i] = acceptedItaration.get(i);
+		  model.getObjectiveSeries()[i] = objectiveSeries  .get(i);
 		}
 		
 		return model;
