@@ -10,5 +10,8 @@ public class CosineFitResult {
   public double[] objMaxs;
   public double[] objMeans;
   public double[] acceptedIter;
+  public double[] hist;
+  public double minPer;
+  public double maxPer;
   
 }

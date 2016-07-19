@@ -28,13 +28,13 @@ public class CosineModel {
   public CosineModel(double amplitude, double phase, double period) {
 		super();
 		this.vars = new double[] {amplitude, phase,period};
-		this.maxChanges = new double[] {0.05, (1.0/24), 1.0};
+		this.maxChanges = new double[] {0.2, (0.5), 8};
 	}
 	
 	public CosineModel() {
 		super();
 		this.vars = new double[] {1, 0, 24};
-		this.maxChanges = new double[] {0.1, (1.0/12), 2.0};
+		this.maxChanges = new double[] {0.2, (0.5), 8};
 	}
 
 	public double diff(double[] x, double[] y) {

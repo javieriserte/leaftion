@@ -630,14 +630,14 @@ public class Leaftion extends JFrame {
   class OptimizeButtonActionListener implements ActionListener {
 
     
-    private Motions dummyMotions() {
+    private Motions dummyMotions(double per) {
 
       Motions m = new Motions();
       
       double[] mot = new double[300];
       
       for (int i = 0; i< 300; i++) {
-        mot[i] = 0.5 * Math.cos(2 * Math.PI * ( i + 2 ) / 24) + Math.random()*0.6 - 0.3;
+        mot[i] = 0.5 * Math.cos(2 * Math.PI * ( i + 2 ) / per) + Math.random()*0.6 - 0.3;
       }
           
       m.setV_motion(mot);
@@ -666,16 +666,16 @@ public class Leaftion extends JFrame {
           JFrame optFrame = new JFrame();
           OptimizePanel optimizePanel = new OptimizePanel();
           
-          FittedMotions[] fmot = new FittedMotions[4];
+          FittedMotions[] fmot = new FittedMotions[ 5 ];
 
           optimizePanel
               .setInterval(Double.parseDouble(intervalTxt.getText()));
 
-          for (int i = 0; i < 4; i++) {
+          for (int i = 0; i < 5; i++) {
             fmot[i] = new FittedMotions();
             fmot[i].fittedModel = null;
             fmot[i].label = String.format("Region %d", i);
-            fmot[i].motions = dummyMotions();
+            fmot[i].motions = dummyMotions(22 + i);
           }
 
           optimizePanel.setMotionEstimation(fmot);
