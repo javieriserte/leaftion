@@ -637,7 +637,7 @@ public class Leaftion extends JFrame {
       double[] mot = new double[300];
       
       for (int i = 0; i< 300; i++) {
-        mot[i] = 0.5 * Math.cos(2 * Math.PI * ( i + 2 ) / per) + Math.random()*0.6 - 0.3;
+        mot[i] = 0.5 * Math.cos(2 * Math.PI * ( i + 2 ) / per) + Math.random() * 1.5 - 0.75;
       }
           
       m.setV_motion(mot);

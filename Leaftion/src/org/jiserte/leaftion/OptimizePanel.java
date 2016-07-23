@@ -13,7 +13,6 @@ import java.awt.event.ActionListener;
 import java.awt.event.AdjustmentEvent;
 import java.awt.event.AdjustmentListener;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -51,7 +50,9 @@ public class OptimizePanel extends JPanel {
   private MotionPlotPanel plotPanel;
   private double interval;
 
+  @SuppressWarnings("unused")
   private int replicates;
+  @SuppressWarnings("unused")
   private int iterations;
 
   private JScrollBar startScrollBar;
@@ -103,12 +104,10 @@ public class OptimizePanel extends JPanel {
     lpc.gridy = 2;
     listPanel.add(clearGroupsBtn, lpc);
 
-    clearGroupsBtn.addActionListener(new ActionListener() {
-      @Override
-      public void actionPerformed(ActionEvent e) {
-        OptimizePanel.this.clearGroups();
-      }
-    });
+    GroupPanelButtonsActionListener grpBtnListener = new GroupPanelButtonsActionListener();
+    
+    clearGroupsBtn.addActionListener(grpBtnListener);
+    clearGroupsBtn.setActionCommand("ADD");
 
     JButton setGroupBtn = new JButton("Make group");
     lpc.gridx = 1;
@@ -116,25 +115,15 @@ public class OptimizePanel extends JPanel {
     lpc.fill = GridBagConstraints.BOTH;
     listPanel.add(setGroupBtn, lpc);
 
-    setGroupBtn.addActionListener(new ActionListener() {
-      @Override
-      public void actionPerformed(ActionEvent e) {
-        OptimizePanel.this.groupSelected();
-      }
-    });
+    setGroupBtn.addActionListener(grpBtnListener);
+    setGroupBtn.setActionCommand("SET");
 
     JButton calcGroupsBtn = new JButton("Group avg.");
     lpc.gridx = 2;
     lpc.gridy = 2;
     listPanel.add(calcGroupsBtn, lpc);
-    calcGroupsBtn.addActionListener(new ActionListener() {
-
-      @Override
-      public void actionPerformed(ActionEvent e) {
-        OptimizePanel.this.showGroupAverages();
-
-      }
-    });
+    calcGroupsBtn.addActionListener(grpBtnListener);
+    calcGroupsBtn.setActionCommand("AVG");
 
     lpc.gridx = 0;
     lpc.gridy = 3;
@@ -155,16 +144,7 @@ public class OptimizePanel extends JPanel {
 
     this.motionsList.setCellRenderer(new MotionListCellRenderer());
 
-    this.motionsList.addListSelectionListener(new ListSelectionListener() {
-
-      @Override
-      public void valueChanged(ListSelectionEvent e) {
-
-        prepareAndShowMotionPlotPanel();
-
-      }
-
-    });
+    this.motionsList.addListSelectionListener( new GroupListSelectionListener() );
 
     lpc.gridx = 0;
     lpc.gridy = 1;
@@ -172,14 +152,6 @@ public class OptimizePanel extends JPanel {
     listPanel.add(this.motionsList, lpc);
 
     this.plotPanel = new MotionPlotPanel();
-
-    // this.motionsList.setSelectedIndex(0);
-    // this.plotPanel.yData =
-    // this.motionsList.getSelectedValue().motions.getV_motion();
-    // this.plotPanel.xData = new double[this.plotPanel.yData.length];
-    // for (int i = 0 ; i< this.plotPanel.xData.length; i++) {
-    // this.plotPanel.xData[i] = (double) i;
-    // }
 
     this.setLayout(new BorderLayout());
 
@@ -190,189 +162,20 @@ public class OptimizePanel extends JPanel {
 
     optionsPanel.setLayout(layout);
 
-    // this.startScrollBar = new JScrollBar(JScrollBar.HORIZONTAL, 0, 1, 0,
-    // this.plotPanel.yData.length);
     this.startScrollBar = new JScrollBar(JScrollBar.HORIZONTAL, 0, 1, 0, 1);
-
     this.endScrollBar = new JScrollBar(JScrollBar.HORIZONTAL, 0, 1, 0, 1);
-    // this.endScrollBar = new JScrollBar(JScrollBar.HORIZONTAL, 0, 1, 0,
-    // this.plotPanel.yData.length);
 
-    this.startScrollBar.addAdjustmentListener(new AdjustmentListener() {
-      @Override
-      public void adjustmentValueChanged(AdjustmentEvent e) {
+    TimeScrollAdjustmenteListener startTimeListener = new TimeScrollAdjustmenteListener();
+    startTimeListener.isStart=true;
+    this.startScrollBar.addAdjustmentListener(startTimeListener);
 
-        int start = e.getValue();
-        int end = Math.max(start, OptimizePanel.this.endScrollBar.getValue());
-
-        OptimizePanel.this.endScrollBar.setValue(end);
-        OptimizePanel.this.plotPanel.startSelectIndex = start;
-        OptimizePanel.this.plotPanel.endSelectIndex = end;
-
-        OptimizePanel.this.startFrameInd.setText(String.valueOf(start));
-        OptimizePanel.this.endFrameInd.setText(String.valueOf(end));
-
-        // OptimizePanel.this.endScrollBar.updateUI();
-        OptimizePanel.this.startFrameInd.updateUI();
-        OptimizePanel.this.endFrameInd.updateUI();
-        OptimizePanel.this.plotPanel.updateUI();
-      }
-
-    });
-
-    this.endScrollBar.addAdjustmentListener(new AdjustmentListener() {
-
-      @Override
-      public void adjustmentValueChanged(AdjustmentEvent e) {
-        int end = e.getValue();
-        int start = Math.min(end, OptimizePanel.this.startScrollBar.getValue());
-
-        OptimizePanel.this.plotPanel.startSelectIndex = start;
-        OptimizePanel.this.plotPanel.endSelectIndex = end;
-
-        OptimizePanel.this.startScrollBar.setValue(start);
-        OptimizePanel.this.startFrameInd.setText(String.valueOf(start));
-        OptimizePanel.this.endFrameInd.setText(String.valueOf(end));
-        //
-        // OptimizePanel.this.startScrollBar.updateUI();
-        OptimizePanel.this.startFrameInd.updateUI();
-        OptimizePanel.this.endFrameInd.updateUI();
-        OptimizePanel.this.plotPanel.updateUI();
-      }
-    });
+    TimeScrollAdjustmenteListener endTimeListener = new TimeScrollAdjustmenteListener();
+    endTimeListener.isStart=false;
+    this.endScrollBar.addAdjustmentListener(endTimeListener);
 
     JButton optimButton = new JButton("Fit data");
 
-    optimButton.addActionListener(new ActionListener() {
-
-      @Override
-      public void actionPerformed(ActionEvent e) {
-
-        int[] selIdx = OptimizePanel.this.motionsList.getSelectedIndices();
-
-        int replicates = 5;
-
-        int iterations = 10000;
-
-        for (int i : selIdx) {
-
-          FittedMotions fm = motionsList.getModel().getElementAt(i);
-
-          double[] y = fm.motions.getV_motion();
-
-          double[] x = new double[y.length];
-
-          for (int j = 0; j < x.length; j++) {
-
-            x[j] = j * interval;
-
-          }
-
-          List<CosineModel> models = new ArrayList<>();
-
-          ModelEvaluator me = new ModelEvaluator(iterations, x, y);
-
-          for (int j = 0; j < replicates; j++) {
-            CosineModel cm = me.optimize();
-            models.add(cm);
-          }
-
-          // ------------------------------------------------------ //
-          // Get means and std dev for periods and phases
-          double meanPer = 0;
-          double meanPha = 0;
-          double stdPer = 0;
-          double stdPha = 0;
-
-          for (CosineModel m : models) {
-            meanPer += m.getPeriod();
-            meanPha += m.getPhase();
-          }
-
-          meanPer /= replicates;
-          meanPha /= replicates;
-
-          for (CosineModel m : models) {
-            stdPer += Math.pow(m.getPeriod() - meanPer, 2);
-            stdPha += Math.pow(m.getPhase() - meanPha, 2);
-          }
-          stdPer = Math.sqrt(stdPer) / replicates;
-          stdPha = Math.sqrt(stdPha) / replicates;
-
-          CosineFitResult r = new CosineFitResult();
-
-          r.period = meanPer;
-          r.phase = meanPha;
-          r.stdPeriod = stdPer;
-          r.stdPhase = stdPha;
-          // ------------------------------------------------------ //
-
-          // ------------------------------------------------------ //
-          // Build fitting profile
-          double[][] objProfile = new double[5][50];
-
-          double cellSize = iterations / 50;
-
-          for (int jj = 0; jj < 50; jj++) {
-
-            objProfile[0][jj] = (int) ((jj + 1) * cellSize); // Iteration
-            // range
-            objProfile[1][jj] = Double.MAX_VALUE; // Min Objective
-                                                  // Value
-            objProfile[2][jj] = 0; // Mean Objective Value
-            objProfile[3][jj] = 0; // Max Objective Value
-            objProfile[4][jj] = 0; // counter
-
-          }
-
-          for (CosineModel m : models) {
-            for (int k = 0; k < 50; k++) {
-              double oValue = m.getObjectiveSeries()[k];
-
-              objProfile[1][k] = Math.min(objProfile[1][k], oValue);
-              objProfile[2][k] += oValue;
-              objProfile[3][k] = Math.max(objProfile[3][k], oValue);
-              objProfile[4][k] = objProfile[4][k] + 1;
-
-            }
-          }
-
-          for (int k = 0; k < 50; k++) {
-            if (objProfile[4][k] > 0) {
-              objProfile[2][k] = objProfile[2][k] / objProfile[4][k];
-            } else {
-              objProfile[2][k] = -1;
-            }
-          }
-
-          r.objMaxs = objProfile[3];
-          r.objMeans = objProfile[2];
-          r.objMins = objProfile[1];
-          r.acceptedIter = objProfile[0];
-
-          // ------------------------------------------------------ //
-
-          // ------------------------------------------------------ //
-          // Build means histogram
-          double[] hist = OptimizePanel.this.getHistogram(models);
-          r.hist = hist;
-          double[] minmax = OptimizePanel.this.getMinMaxPeriods(models);
-          r.minPer = minmax[0];
-          r.maxPer = minmax[1];
-          // ------------------------------------------------------ //
-
-          motionsList.getModel().getElementAt(i).fittedModel = r;
-
-          // ------------------------------------------------------ //
-          // update UI
-          motionsList.updateUI();
-          OptimizePanel.this.prepareAndShowMotionPlotPanel();
-          // ------------------------------------------------------ //
-
-        }
-
-      }
-    });
+    optimButton.addActionListener(new FitButtonActionListener());
 
     JButton saveButton = new JButton("Save");
 
@@ -460,42 +263,9 @@ public class OptimizePanel extends JPanel {
 
   }
 
-  protected double[] getHistogram(List<CosineModel> models) {
-    double[] minMax = getMinMaxPeriods(models);
 
-    double minPer = minMax[0];
-    double maxPer = minMax[1];
 
-    double cellSize = (maxPer - minPer) / 10;
-    double[] hist = new double[10];
-    for (int i = 0; i < hist.length; i++) {
-      hist[i] = 0;
-    }
-    for (CosineModel m : models) {
 
-      double currentPeriod = m.getPeriod();
-
-      int index = (int) Math.min((currentPeriod - minPer) / cellSize, 9);
-      hist[index]++;
-
-    }
-
-    return hist;
-
-  }
-
-  private double[] getMinMaxPeriods(List<CosineModel> models) {
-    double[] minMax = new double[2];
-    minMax[0] = Double.MAX_VALUE;
-    minMax[1] = 0;
-
-    for (CosineModel m : models) {
-      double currentPeriod = m.getPeriod();
-      minMax[0] = Math.min(minMax[0], currentPeriod);
-      minMax[1] = Math.max(minMax[1], currentPeriod);
-    }
-    return minMax;
-  }
 
   protected void groupSelected() {
 
@@ -503,7 +273,8 @@ public class OptimizePanel extends JPanel {
 
     for (int i = 0; i < this.motionsList.getModel().getSize(); i++) {
       if (!this.motionsList.isSelectedIndex(i)) {
-        maxGroupIndex = Math.max(maxGroupIndex, this.motionsList.getModel().getElementAt(i).group);
+        maxGroupIndex = Math.max(maxGroupIndex, 
+            this.motionsList.getModel().getElementAt(i).group);
       }
     }
     maxGroupIndex++;
@@ -591,8 +362,9 @@ public class OptimizePanel extends JPanel {
       sdPer = Math.sqrt(sdPer) / cpers.size();
       sdPha = Math.sqrt(sdPha) / cpers.size();
 
-      groupMeansData[i] = String.format("Gr: %d Per: %5.2f (%5.2f) Pha: %5.2f (%5.2f)", cgroup, sumPer, sdPer, sumPha,
-          sdPha);
+      groupMeansData[i] = String.format(
+          "Gr: %d Per: %5.2f (%5.2f) Pha: %5.2f (%5.2f)", 
+          cgroup, sumPer, sdPer, sumPha, sdPha);
     }
 
     OptimizePanel.this.groupAvgList.setFont(new Font("Verdana", 1, 9));
@@ -721,4 +493,109 @@ public class OptimizePanel extends JPanel {
     }
   }
 
+  class GroupPanelButtonsActionListener implements ActionListener {
+    @Override
+    public void actionPerformed(ActionEvent e) {
+      switch(e.getActionCommand()) {
+      case "ADD":
+        OptimizePanel.this.clearGroups();
+        break;
+      case "SET":
+        OptimizePanel.this.groupSelected();
+        break;
+      case "AVG":
+        OptimizePanel.this.showGroupAverages();
+        break;
+      default:
+        break;
+      }
+    }
+  }
+  
+  class GroupListSelectionListener implements ListSelectionListener {
+    @Override
+    public void valueChanged(ListSelectionEvent e) {
+      OptimizePanel.this.prepareAndShowMotionPlotPanel();
+    }
+  }
+  
+  class TimeScrollAdjustmenteListener implements AdjustmentListener {
+    public boolean isStart;
+
+    @Override
+    public void adjustmentValueChanged(AdjustmentEvent e) {
+      int start= 0; 
+      int end= 0;      
+      if (this.isStart) {
+        start = e.getValue();
+        end = Math.max(start, OptimizePanel.this.endScrollBar.getValue());
+      } else {
+        end = e.getValue();
+        start = Math.min(end, OptimizePanel.this.startScrollBar.getValue());
+      }
+      
+      OptimizePanel.this.endScrollBar.setValue(end);
+      OptimizePanel.this.plotPanel.startSelectIndex = start;
+      OptimizePanel.this.plotPanel.endSelectIndex = end;
+
+      OptimizePanel.this.startFrameInd.setText(String.valueOf(start));
+      OptimizePanel.this.endFrameInd.setText(String.valueOf(end));
+
+      OptimizePanel.this.startFrameInd.updateUI();
+      OptimizePanel.this.endFrameInd.updateUI();
+      OptimizePanel.this.plotPanel.updateUI();
+
+    }
+  }
+  
+  class FitButtonActionListener implements ActionListener {
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+
+      int[] selIdx = OptimizePanel.this.motionsList.getSelectedIndices();
+      
+      int replicates = 5;
+      int iterations = 10000;
+      
+      for (int i : selIdx) {
+
+        FittedMotions fm = motionsList.getModel().getElementAt(i);
+
+        double[] y = fm.motions.getV_motion();
+        double[] x = getTimeInteravals(y);
+
+        List<CosineModel> models = new ArrayList<>();
+
+        ModelEvaluator me = new ModelEvaluator(iterations, x, y);
+
+        for (int j = 0; j < replicates; j++) {
+          CosineModel cm = me.optimize();
+          models.add(cm);
+        }
+
+        // ------------------------------------------------------------------ //
+        // Build Fitted results
+        motionsList.getModel().getElementAt(i).fittedModel = 
+            new CosineFitResult(models, iterations);
+        // ------------------------------------------------------------------ //
+
+        // ------------------------------------------------------------------ //
+        // update UI
+        motionsList.updateUI();
+        OptimizePanel.this.prepareAndShowMotionPlotPanel();
+        // ------------------------------------------------------------------ //
+
+      }
+
+    }
+
+    private double[] getTimeInteravals(double[] y) {
+      double[] x = new double[y.length];
+      for (int j = 0; j < x.length; j++) {
+        x[j] = j * OptimizePanel.this.interval;
+      }
+      return x;
+    }
+  }
 }
