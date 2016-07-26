@@ -413,6 +413,8 @@ public class OptimizePanel extends JPanel {
 
       OptimizePanel.this.plotPanel.startSelectIndex = 0;
       OptimizePanel.this.plotPanel.endSelectIndex = 0;
+      
+      
       if (OptimizePanel.this.startScrollBar != null) {
         OptimizePanel.this.startScrollBar.setValue(0);
         OptimizePanel.this.startScrollBar.setMaximum(

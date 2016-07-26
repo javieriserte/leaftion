@@ -9,5 +9,6 @@ public class FittedMotions {
 	public String label;
 	public CosineFitResult fittedModel ;
 	public int group;
+	public double interval;
 
 }
