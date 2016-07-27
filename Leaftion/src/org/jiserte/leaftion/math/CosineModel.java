@@ -37,13 +37,15 @@ public class CosineModel {
 		this.maxChanges = new double[] {0.2, (0.5), 8};
 	}
 
-	public double diff(double[] x, double[] y) {
+	public double diff(double[] x, double[] y, int from, int to) {
 		double diff = 0;
 		for (int i = 0; i< x.length; i++) {
+		  if ( i>= from && i <=to  ){
 			double val = vars[0] * Math.cos(  
 					( x[i] + this.vars[1]) * Math.PI * 2 / this.vars[2]  ); 
 					
 			diff += Math.pow(val - y[i],2);
+		  }
 		}
 		return diff;
 	}
@@ -74,4 +76,8 @@ public class CosineModel {
 		return this.vars[1];
 	}
 
+	 public double getAmplitude() {
+	    return this.vars[0];
+	  }
+	
 }

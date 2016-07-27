@@ -7,6 +7,8 @@ import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import java.util.List;
+
 import javax.swing.JPanel;
 
 public class MotionPlotPanel extends JPanel {
@@ -23,6 +25,8 @@ public class MotionPlotPanel extends JPanel {
   public double[] objmeans;
   public double[] objmins;
   public double[] iters;
+  
+  public List<FittedMotions> fittedMotions;
 
   public boolean showFittingProfiles = false;
 
@@ -36,13 +40,15 @@ public class MotionPlotPanel extends JPanel {
   public double modelPeriod;
 
   public double modelPhase;
+  
+  private BrewerColorMapper colorMapper;
 
-  // @Override
-  // protected void paintComponent(Graphics g) {
-  // super.paintComponent(g);
-  //
-  // }
-
+  
+  public MotionPlotPanel() {
+    this.colorMapper = new BrewerColorMapper();
+  }
+  
+  
   @Override
   protected void paintComponent(Graphics g) {
     super.paintComponent(g);
@@ -53,7 +59,14 @@ public class MotionPlotPanel extends JPanel {
 
     int plotWidth = 0;
     int plotHeight = 0;
+    
+    if (this.fittedMotions==null) {
+      g2d.dispose();
+      return;
+    }
 
+    boolean showFittingProfiles = this.mustShowFittingProfiles();
+    
     if (showFittingProfiles) {
       plotWidth = (int) (width * 0.95);
       plotHeight = (int) (height * 0.45);
@@ -88,16 +101,21 @@ public class MotionPlotPanel extends JPanel {
       }
 
     }
+    
+    double minY = Double.MAX_VALUE;
+    double maxY = Double.MIN_VALUE;
 
-    if (xData == null || xData[0] == null|| xData[0].length <= 1) {
-      return;
+    double minX = 0;
+    double maxX = this.fittedMotions.get(0).motions.getV_motion().length * 
+        this.fittedMotions.get(0).interval;
+    
+    for (FittedMotions mot : this.fittedMotions) {
+      maxY = Math.max(maxY, this.maxArray(mot.motions.getV_motion()));
+      minY = Math.min(minY, this.minArray(mot.motions.getV_motion()));
     }
 
-    double maxY = this.maxArray(yData[0]);
-    double maxX = this.maxArray(xData[0]);
-    double minY = this.minArray(yData[0]);
-    double minX = this.minArray(xData[0]);
-    if (this.showFittingProfiles) {
+
+    if (showFittingProfiles) {
       g.translate((width - plotWidth) / 2, (int) (height * 0.05));
     } else {
       g.translate((width - plotWidth) / 2, (height - plotHeight) / 2);
@@ -107,8 +125,8 @@ public class MotionPlotPanel extends JPanel {
     // Draw Selected Area
     if (this.endSelectIndex > this.startSelectIndex) {
 
-      int x1_tr = (int) ((xData[0][this.startSelectIndex] - minX) / (maxX - minX) * dataAreaWidth + hTickAreaWidth);
-      int x2_tr = (int) ((xData[0][this.endSelectIndex] - minX) / (maxX - minX) * dataAreaWidth + hTickAreaWidth);
+      int x1_tr = (int) ((this.startSelectIndex*this.fittedMotions.get(0).interval - minX) / (maxX - minX) * dataAreaWidth + hTickAreaWidth);
+      int x2_tr = (int) ((this.endSelectIndex*this.fittedMotions.get(0).interval - minX) / (maxX - minX) * dataAreaWidth + hTickAreaWidth);
 
       g.setColor(new Color(200, 245, 200, 60));
       g.fillRect(x1_tr, 0, x2_tr - x1_tr, dataAreaHeight);
@@ -170,31 +188,47 @@ public class MotionPlotPanel extends JPanel {
 
     // ---------------------------------------------------------------------- //
     // Plot lines
-    g2d.setColor(Color.RED);
-    g2d.setStroke(new BasicStroke(2));
-    for (int i = 1; i < xData[0].length; i++) {
-      double x1_tr = (xData[0][i - 1] - minX) / (maxX - minX) * dataAreaWidth + hTickAreaWidth;
-      double x2_tr = (xData[0][i] - minX) / (maxX - minX) * dataAreaWidth + hTickAreaWidth;
-      double y1_tr = dataAreaHeight - (yData[0][i - 1] - minY) / (maxY - minY) * dataAreaHeight;
-      double y2_tr = dataAreaHeight - (yData[0][i] - minY) / (maxY - minY) * dataAreaHeight;
-      g2d.drawLine((int) x1_tr, (int) y1_tr, (int) x2_tr, (int) y2_tr);
+    int motionCounter = 0;
+    for (FittedMotions mot : this.fittedMotions) {
+      Color qualitativeColor = this.colorMapper.getQualitativeColor(motionCounter);
+      Color qColor = new Color(
+          qualitativeColor.getRed(), 
+          qualitativeColor.getGreen(), 
+          qualitativeColor.getBlue(),
+          127 );
+      g2d.setColor(qColor);
+      g2d.setStroke(new BasicStroke(1.5f));
+      double[]  yData = mot.motions.getV_motion(); 
+      for (int i = 1; i < yData.length; i++) {
+        double x1_tr = ((i - 1)*mot.interval - minX) / (maxX - minX) * dataAreaWidth + hTickAreaWidth;
+        double x2_tr = (i*mot.interval - minX) / (maxX - minX) * dataAreaWidth + hTickAreaWidth;
+        double y1_tr = dataAreaHeight - (yData[i - 1] - minY) / (maxY - minY) * dataAreaHeight;
+        double y2_tr = dataAreaHeight - (yData[i] - minY) / (maxY - minY) * dataAreaHeight;
+        g2d.drawLine((int) x1_tr, (int) y1_tr, (int) x2_tr, (int) y2_tr);
+      }
+      motionCounter++;
     }
     // ---------------------------------------------------------------------- //
 
     // ---------------------------------------------------------------------- //
     // Plot model lines
     if (showFittingProfiles) {
-    g2d.setColor(Color.blue);
-    g2d.setStroke(new BasicStroke(1));
-    for (int i = 1; i < xData[0].length; i++) {
-      double x1_tr = (xData[0][i - 1] - minX) / (maxX - minX) * dataAreaWidth + hTickAreaWidth;
-      double x2_tr = (xData[0][i] - minX) / (maxX - minX) * dataAreaWidth + hTickAreaWidth;
-      double modelYVal1 = Math.cos(  ( modelPhase + xData[0][i - 1]) * 2 * Math.PI / this.modelPeriod );
-      double modelYVal2 = Math.cos(  ( modelPhase + xData[0][i]) * 2 * Math.PI / this.modelPeriod );
-      double y1_tr = dataAreaHeight - (modelYVal1 - minY) / (maxY - minY) * dataAreaHeight;
-      double y2_tr = dataAreaHeight - (modelYVal2 - minY) / (maxY - minY) * dataAreaHeight;
-      g2d.drawLine((int) x1_tr, (int) y1_tr, (int) x2_tr, (int) y2_tr);
-    }
+      g2d.setColor(Color.blue);
+      g2d.setStroke(new BasicStroke(1));
+      double[]  yData = this.fittedMotions.get(0).motions.getV_motion();
+      double modelPeriod = this.fittedMotions.get(0).fittedModel.period;
+      double interval = this.fittedMotions.get(0).interval;
+      double modelPhase = this.fittedMotions.get(0).fittedModel.phase;
+      double modelAmplitude = this.fittedMotions.get(0).fittedModel.amplitude;
+      for (int i = 1; i < yData.length; i++) {
+        double x1_tr = ((i - 1)*interval - minX) / (maxX - minX) * dataAreaWidth + hTickAreaWidth;
+        double x2_tr = ( (i)*interval  - minX) / (maxX - minX) * dataAreaWidth + hTickAreaWidth;
+        double modelYVal1 = modelAmplitude * Math.cos(  ( ( modelPhase + (i - 1) * interval) )* 2 * Math.PI / modelPeriod );
+        double modelYVal2 = modelAmplitude * Math.cos(  ( modelPhase + i * interval )* 2 * Math.PI / modelPeriod );
+        double y1_tr = dataAreaHeight - (modelYVal1 - minY) / (maxY - minY) * dataAreaHeight;
+        double y2_tr = dataAreaHeight - (modelYVal2 - minY) / (maxY - minY) * dataAreaHeight;
+        g2d.drawLine((int) x1_tr, (int) y1_tr, (int) x2_tr, (int) y2_tr);
+      }
     }
     // ---------------------------------------------------------------------- //
 
@@ -204,7 +238,7 @@ public class MotionPlotPanel extends JPanel {
 
     // ---------------------------------------------------------------------- //
     // Objective Function Profile Plot
-    if (this.showFittingProfiles) {
+    if (showFittingProfiles) {
 
       // Reverse last translation back to origin
       g.translate(-(width - plotWidth) / 2, (int) -(height * 0.05));
@@ -239,11 +273,16 @@ public class MotionPlotPanel extends JPanel {
 
       // -------------------------------------------------------------------- // 
       // Draw ticks
-      double max = this.objmeans[3];
+      double[] objMeans = this.fittedMotions.get(0).fittedModel.objMeans;
+      double[] objMins = this.fittedMotions.get(0).fittedModel.objMins;      
+      double[] objMaxs = this.fittedMotions.get(0).fittedModel.objMaxs;      
+      double[] acceptedIter = this.fittedMotions.get(0).fittedModel.acceptedIter;
+
+      double max = objMeans[3];
       double min = Double.MAX_VALUE;
-      for (int i = 0; i < this.objmeans.length; i++) {
-        if (this.objmins[i] >= 0) {
-          min = Math.min(this.objmins[i], min);
+      for (int i = 0; i < objMeans.length; i++) {
+        if (objMins[i] >= 0) {
+          min = Math.min(objMins[i], min);
         }
       }
 
@@ -261,7 +300,7 @@ public class MotionPlotPanel extends JPanel {
         tickY -= h;
       }
 
-      maxX = this.iters[this.iters.length - 1];
+      maxX = acceptedIter[acceptedIter.length - 1];
       h = (int) (maxX) / 3;
       h = this.selectSpacer(h);
 
@@ -284,19 +323,19 @@ public class MotionPlotPanel extends JPanel {
       // -------------------------------------------------------------------- //
       // Draw Points and max & mins
       g.translate(hGapB, vGapB);
-      for (int i = 3; i < this.objmeans.length; i++) {
+      for (int i = 3; i < objMeans.length; i++) {
 
-        if (this.objmeans[i] >= 0) {
+        if (objMeans[i] >= 0) {
 
-          int cx = (int) (i * (pointsWidth) / (this.objmeans.length));
+          int cx = (int) (i * (pointsWidth) / (objMeans.length));
 
-          int cy = (int) pointsHeight - ((int) ((this.objmeans[i] - min) * (pointsHeight) / (max - min)));
+          int cy = (int) pointsHeight - ((int) ((objMeans[i] - min) * (pointsHeight) / (max - min)));
 
-          double cm = Math.min(this.objmaxs[i], max);
+          double cm = Math.min(objMaxs[i], max);
 
           int cyma = (int) pointsHeight - ((int) ((cm - min) * (pointsHeight) / (max - min)));
 
-          int cymi = (int) pointsHeight - ((int) ((this.objmins[i] - min) * (pointsHeight) / (max - min)));
+          int cymi = (int) pointsHeight - ((int) ((objMins[i] - min) * (pointsHeight) / (max - min)));
 
           g.drawLine(cx, cyma, cx, cymi);
           g.fillRect(cx - 2, cy - 2, 5, 5);
@@ -315,8 +354,12 @@ public class MotionPlotPanel extends JPanel {
 
     // ---------------------------------------------------------------------- //
     // Draw Period histogram
-    if (this.showFittingProfiles) {
-
+    if (showFittingProfiles) {
+      
+      double[] hist = this.fittedMotions.get(0).fittedModel.hist;
+      double minPer = this.fittedMotions.get(0).fittedModel.minPer;
+      double maxPer = this.fittedMotions.get(0).fittedModel.maxPer;
+      
       int profilePlotWidth = (int) (0.45 * width);
       int profilePlotHeight = (int) (0.45 * height);
 
@@ -351,15 +394,15 @@ public class MotionPlotPanel extends JPanel {
       double spacerH = pointsWidth / 49;
       double barH    = 4 * spacerH;
       double maxHist = 0;
-      for (int i = 0; i < this.hist.length; i++) {
-        maxHist  = Math.max(maxHist, this.hist[i]);
+      for (int i = 0; i < hist.length; i++) {
+        maxHist  = Math.max(maxHist, hist[i]);
       }
-      for (int i = 0; i < this.hist.length; i++) {
+      for (int i = 0; i < hist.length; i++) {
         g2d.fillRect(
             (int) ( i * ( spacerH + barH ) ), 
-            (int) (pointsHeight - (pointsHeight * this.hist[i] / maxHist) ) ,
+            (int) (pointsHeight - (pointsHeight * hist[i] / maxHist) ) ,
             (int) barH, 
-            (int) (pointsHeight * this.hist[i] / maxHist ) );
+            (int) (pointsHeight * hist[i] / maxHist ) );
         
       }
       g.translate(-hGapB, -vGapB);
@@ -393,9 +436,16 @@ public class MotionPlotPanel extends JPanel {
 
       
     }
-
+    g2d.dispose();
     // ---------------------------------------------------------------------- //
 
+  }
+
+  private boolean mustShowFittingProfiles() {
+
+    return ( this.fittedMotions.size() == 1) && 
+           ( this.fittedMotions.get(0).fittedModel != null );
+    
   }
 
   private double maxArray(double[] array) {

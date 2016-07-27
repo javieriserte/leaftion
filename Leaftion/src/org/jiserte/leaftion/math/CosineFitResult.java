@@ -8,6 +8,7 @@ public class CosineFitResult {
   // Instance variables
   public double period;
   public double phase;
+  public double amplitude;
   public double stdPeriod;
   public double stdPhase;
   public double[] objMins;
@@ -99,14 +100,17 @@ public class CosineFitResult {
     double meanPha = 0;
     double stdPer = 0;
     double stdPha = 0;
+    double amplitude = 0;
     
     for (CosineModel m : models) {
       meanPer += m.getPeriod();
       meanPha += m.getPhase();
+      amplitude += m.getAmplitude();
     }
 
     meanPer /= replicates;
     meanPha /= replicates;
+    amplitude /= replicates;
 
     for (CosineModel m : models) {
       stdPer += Math.pow(m.getPeriod() - meanPer, 2);
@@ -117,6 +121,7 @@ public class CosineFitResult {
 
     this.period = meanPer;
     this.phase = meanPha;
+    this.amplitude = amplitude;
     this.stdPeriod = stdPer;
     this.stdPhase = stdPha;
   }

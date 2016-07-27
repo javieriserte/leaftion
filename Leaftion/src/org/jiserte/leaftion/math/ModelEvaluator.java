@@ -10,13 +10,17 @@ public class ModelEvaluator {
 	private double[] x;
 	private double[] y;
 	private double lastDiff;
+	private int from;
+	private int to;
 
-	public ModelEvaluator(int iterations, double[] x, double[] y) {
+	public ModelEvaluator(int iterations, double[] x, double[] y, int from, int to) {
 		super();
 		this.iterations = iterations;
 		this.x = x;
 		this.y = y;
 		this.lastDiff = Double.MAX_VALUE;
+		this.from = from;
+		this.to= to;
 	}
 
 	public CosineModel optimize() {
@@ -25,7 +29,7 @@ public class ModelEvaluator {
 
 		int reportPeriod = (int) (this.iterations / 50);
 
-		this.lastDiff = model.diff(x, y);
+		this.lastDiff = model.diff(x, y, from, to);
 
 		List<Double> objectiveSeries = new ArrayList<>();
 		List<Integer> acceptedItaration = new ArrayList<>();
@@ -34,7 +38,7 @@ public class ModelEvaluator {
 
 			CosineModel newModel = model.mutate();
 
-			double diff = newModel.diff(x, y);
+			double diff = newModel.diff(x, y, from, to);
 
 			if (diff < this.lastDiff) {
 
@@ -121,7 +125,7 @@ public class ModelEvaluator {
 			cx[i] = i;
 		}
 
-		ModelEvaluator me = new ModelEvaluator(10000, cx, cy);
+		ModelEvaluator me = new ModelEvaluator(10000, cx, cy, 0, cx.length-1);
 
 		CosineModel a = me.optimize();
 

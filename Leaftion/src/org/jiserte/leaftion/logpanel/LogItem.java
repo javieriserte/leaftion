@@ -8,9 +8,9 @@ public class LogItem {
 
   // ------------------------------------------------------------------------ //
   // Class constans
-  public static final int LOG_ITEM_ERROR = 0;
-  public static final int LOG_ITEM_WARNING = 1;
-  public static final int LOG_ITEM_NORMAL = 2;
+//  public static final int LOG_ITEM_ERROR = 0;
+//  public static final int LOG_ITEM_WARNING = 1;
+//  public static final int LOG_ITEM_NORMAL = 2;
   // ------------------------------------------------------------------------ //
 
   // ------------------------------------------------------------------------ //
@@ -53,10 +53,10 @@ public class LogItem {
   public String toString() {
     String typeDesc = "";
     SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
-    if (this.getType() == LOG_ITEM_ERROR) {
+    if (this.getType() == LoggingListPanel.ERROR_TYPE) {
       typeDesc = " ERROR:";
     }
-    if (this.getType() == LOG_ITEM_WARNING) {
+    if (this.getType() == LoggingListPanel.WARNING_TYPE) {
       typeDesc = " WARNING: ";
     }
     return sdf.format(this.getTimeStamp()) + ">>" + typeDesc + " " + this.getMessage();

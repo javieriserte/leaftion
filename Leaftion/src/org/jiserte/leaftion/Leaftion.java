@@ -20,7 +20,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-import javax.imageio.ImageIO;
 import javax.swing.AbstractAction;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -214,6 +213,7 @@ public class Leaftion extends JFrame {
 
     tb.addSeparator(new Dimension(5, 0));
     tb.add(button);
+    tb.add(this.saveButton);
     tb.addSeparator(new Dimension(3, 0));
     tb.add(this.currentFolderLabel);
     tb.addSeparator(sepDimension);
@@ -228,8 +228,6 @@ public class Leaftion extends JFrame {
     tb.addSeparator(sepDimension);
     tb.add(this.localeLabel);
     tb.add(this.localeComboBox);
-    tb.addSeparator(sepDimension);
-    tb.add(this.saveButton);
     tb.addSeparator(sepDimension);
     tb.add(new JLabel("Interval (h):"));
     tb.add(this.intervalTxt);
@@ -630,14 +628,15 @@ public class Leaftion extends JFrame {
   class OptimizeButtonActionListener implements ActionListener {
 
     
-    private Motions dummyMotions(double per) {
+    @SuppressWarnings("unused")
+    private Motions dummyMotions(double per, double noise) {
 
       Motions m = new Motions();
       
       double[] mot = new double[300];
       
       for (int i = 0; i< 300; i++) {
-        mot[i] = 0.5 * Math.cos(2 * Math.PI * ( i + 2 ) / per) + Math.random() * 1.5 - 0.75;
+        mot[i] = 0.5 * Math.cos(2 * Math.PI * ( i + 2 ) / per) + Math.random() * noise - noise/2;
       }
           
       m.setV_motion(mot);
@@ -660,56 +659,22 @@ public class Leaftion extends JFrame {
 
       SwingUtilities.invokeLater(new Runnable() {
 
-        @Override
-        public void run() {
-
-          JFrame optFrame = new JFrame();
-          OptimizePanel optimizePanel = new OptimizePanel();
-          
-          FittedMotions[] fmot = new FittedMotions[ 5 ];
-
-          optimizePanel
-              .setInterval(Double.parseDouble(intervalTxt.getText()));
-
-          for (int i = 0; i < 5; i++) {
-            fmot[i] = new FittedMotions();
-            fmot[i].fittedModel = null;
-            fmot[i].label = String.format("Region %d", i);
-            fmot[i].motions = dummyMotions(22 + i);
-          }
-
-          optimizePanel.setMotionEstimation(fmot);
-          optFrame.add(optimizePanel);
-          optFrame.setVisible(true);
-          optFrame.setPreferredSize(new Dimension(1024, 768));
-          optFrame.setSize(new Dimension(1024, 768));
-          optFrame.setLocationRelativeTo(null);
-          optFrame.setTitle("Optimize");
-          optFrame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-          optFrame.pack();
-
-        }
-      });
-      
-
-        
 //        @Override
 //        public void run() {
 //
 //          JFrame optFrame = new JFrame();
 //          OptimizePanel optimizePanel = new OptimizePanel();
 //          
-//          FittedMotions[] fmot = new FittedMotions[
-//              Leaftion.this.motionDetectionResults.size()];
+//          FittedMotions[] fmot = new FittedMotions[ 6 ];
 //
 //          optimizePanel
 //              .setInterval(Double.parseDouble(intervalTxt.getText()));
 //
-//          for (int i = 0; i < fmot.length; i++) {
+//          for (int i = 0; i < 6; i++) {
 //            fmot[i] = new FittedMotions();
 //            fmot[i].fittedModel = null;
-//            fmot[i].label = Leaftion.this.imagePanel.getLabels().get(i);
-//            fmot[i].motions = Leaftion.this.motionDetectionResults.get(i);
+//            fmot[i].label = String.format("Region %d", i);
+//            fmot[i].motions = dummyMotions(24 +  2*(int)(i/3) ,0.9);
 //          }
 //
 //          optimizePanel.setMotionEstimation(fmot);
@@ -724,6 +689,40 @@ public class Leaftion extends JFrame {
 //
 //        }
 //      });
+      
+
+        
+        @Override
+        public void run() {
+
+          JFrame optFrame = new JFrame();
+          OptimizePanel optimizePanel = new OptimizePanel();
+          
+          FittedMotions[] fmot = new FittedMotions[
+              Leaftion.this.motionDetectionResults.size()];
+
+          optimizePanel
+              .setInterval(Double.parseDouble(intervalTxt.getText()));
+
+          for (int i = 0; i < fmot.length; i++) {
+            fmot[i] = new FittedMotions();
+            fmot[i].fittedModel = null;
+            fmot[i].label = Leaftion.this.imagePanel.getLabels().get(i);
+            fmot[i].motions = Leaftion.this.motionDetectionResults.get(i);
+          }
+
+          optimizePanel.setMotionEstimation(fmot);
+          optFrame.add(optimizePanel);
+          optFrame.setVisible(true);
+          optFrame.setPreferredSize(new Dimension(1024, 768));
+          optFrame.setSize(new Dimension(1024, 768));
+          optFrame.setLocationRelativeTo(null);
+          optFrame.setTitle("Optimize");
+          optFrame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+          optFrame.pack();
+
+        }
+      });
 
     }
   }
