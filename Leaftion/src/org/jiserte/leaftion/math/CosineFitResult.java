@@ -1,11 +1,14 @@
 package org.jiserte.leaftion.math;
 
+import java.util.Arrays;
 import java.util.List;
 
 public class CosineFitResult {
 
   // ------------------------------------------------------------------------ //
   // Instance variables
+  public double medianPeriod;
+  public double medianPhase;
   public double period;
   public double phase;
   public double amplitude;
@@ -29,6 +32,10 @@ public class CosineFitResult {
     // ---------------------------------------------------------------------- //
 
     // ---------------------------------------------------------------------- //
+    this.calculateMedians(models);
+    // ---------------------------------------------------------------------- //
+    
+    // ---------------------------------------------------------------------- //
     // Build fitting profile
     this.buildObjectiveFunctionProfile(models, iterations);
     // ---------------------------------------------------------------------- //
@@ -39,6 +46,29 @@ public class CosineFitResult {
     // ---------------------------------------------------------------------- //
   }
   // ------------------------------------------------------------------------ //
+
+  private void calculateMedians(List<CosineModel> models) {
+
+    double[] pers = new double[models.size()];
+    double[] phases = new double[models.size()];
+    
+    int modelCounter = 0;
+    for (CosineModel model : models) {
+      pers[modelCounter] = model.getPeriod();
+      phases[modelCounter] = model.getPhase();
+      
+      modelCounter++;
+    }
+
+    Arrays.sort(pers);
+    Arrays.sort(phases);
+    
+    int medianIndex = (int)((models.size()-1) / 2);
+    
+    this.medianPeriod = pers[medianIndex];
+    this.medianPhase = phases[medianIndex];
+
+  }
 
   // ------------------------------------------------------------------------ //
   // Private methods

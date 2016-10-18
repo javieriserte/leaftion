@@ -413,8 +413,6 @@ public class OptimizePanel extends JPanel {
     }
     
     
-//    OptimizePanel.this.plotPanel.startSelectIndex = 0;
-//    OptimizePanel.this.plotPanel.endSelectIndex = 0;
 
 
     if (OptimizePanel.this.startScrollBar != null) {
@@ -428,60 +426,6 @@ public class OptimizePanel extends JPanel {
           motions.get(0).motions.getV_motion().length);
     }
     
-    // Old version
-
-//    int[] indexes = OptimizePanel.this.motionsList.getSelectedIndices();
-//    
-//    if (indexes.length == 1) {
-//
-//      FittedMotions motion = OptimizePanel.this.motionsList.getSelectedValue();
-//
-//      if (motion == null) {
-//        return;
-//      }
-//
-//      if (motion.fittedModel != null) {
-//        OptimizePanel.this.plotPanel.objmeans = motion.fittedModel.objMeans;
-//        OptimizePanel.this.plotPanel.objmins = motion.fittedModel.objMins;
-//        OptimizePanel.this.plotPanel.objmaxs = motion.fittedModel.objMaxs;
-//        OptimizePanel.this.plotPanel.iters = motion.fittedModel.acceptedIter;
-//        OptimizePanel.this.plotPanel.minPer = motion.fittedModel.minPer;
-//        OptimizePanel.this.plotPanel.maxPer = motion.fittedModel.maxPer;
-//        OptimizePanel.this.plotPanel.hist = motion.fittedModel.hist;
-//
-//        OptimizePanel.this.plotPanel.modelPeriod = motion.fittedModel.period;
-//        OptimizePanel.this.plotPanel.modelPhase = motion.fittedModel.phase;
-//
-//        OptimizePanel.this.plotPanel.showFittingProfiles = true;
-//      } else {
-//        OptimizePanel.this.plotPanel.showFittingProfiles = false;
-//      }
-//
-//      OptimizePanel.this.plotPanel.yData = new double[1][];
-//      OptimizePanel.this.plotPanel.yData[0] = motion.motions.getV_motion();
-//
-//      OptimizePanel.this.plotPanel.xData = new double[1][OptimizePanel.this.plotPanel.yData[0].length];
-//
-//      for (int i = 0; i < OptimizePanel.this.plotPanel.xData[0].length; i++) {
-//        OptimizePanel.this.plotPanel.xData[0][i] = (double) i * OptimizePanel.this.interval;
-//      }
-//
-//      OptimizePanel.this.plotPanel.startSelectIndex = 0;
-//      OptimizePanel.this.plotPanel.endSelectIndex = 0;
-//      
-//      
-//      if (OptimizePanel.this.startScrollBar != null) {
-//        OptimizePanel.this.startScrollBar.setValue(0);
-//        OptimizePanel.this.startScrollBar.setMaximum(
-//            OptimizePanel.this.plotPanel.yData[0].length);
-//      }
-//      if (OptimizePanel.this.endScrollBar != null) {
-//        OptimizePanel.this.endScrollBar.setValue(0);
-//        OptimizePanel.this.endScrollBar.setMaximum(
-//            OptimizePanel.this.plotPanel.yData[0].length);
-//      }
-//
-//    }
 
     OptimizePanel.this.plotPanel.updateUI();
   }
@@ -502,8 +446,8 @@ public class OptimizePanel extends JPanel {
 
       mgr.columnWidths = new int[] { 100, 100 };
       mgr.columnWeights = new double[] { 1, 1 };
-      mgr.rowHeights = new int[] { 20, 20 };
-      mgr.rowWeights = new double[] { 1, 1 };
+      mgr.rowHeights = new int[] { 20, 20, 20 };
+      mgr.rowWeights = new double[] { 1, 1, 1 };
 
       GridBagConstraints c = new GridBagConstraints();
       c.anchor = GridBagConstraints.CENTER;
@@ -516,17 +460,29 @@ public class OptimizePanel extends JPanel {
 
       String per = "Period: ";
       String phase = "Phase: ";
+      String medianPer = "Med Per: ";
+      String medianPha = "Med Pha: ";
 
       if (value.fittedModel == null) {
         per = per + "-";
         phase = phase + "-";
+        medianPer = medianPer + "-";
+        medianPha = medianPha + "-";
       } else {
-        per = per + String.format("%5.2f(%3.2f)", value.fittedModel.period, value.fittedModel.stdPeriod);
-        phase = phase + String.format("%5.2f(%3.2f)", value.fittedModel.phase, value.fittedModel.stdPhase);
+        per = per + String.format( "%5.2f(%3.2f)", value.fittedModel.period, 
+            value.fittedModel.stdPeriod );
+        phase = phase + String.format( "%5.2f(%3.2f)", value.fittedModel.phase, 
+            value.fittedModel.stdPhase );
+        medianPer = medianPer + String.format( "%5.2f", 
+            value.fittedModel.medianPeriod );
+        medianPha = medianPha + String.format( "%5.2f", 
+            value.fittedModel.medianPhase );
       }
 
       JLabel perLabel = new JLabel(per);
       JLabel phaseLabel = new JLabel(phase);
+      JLabel medPerLabel = new JLabel(medianPer);
+      JLabel medPhaseLabel = new JLabel(medianPha);
 
       Font font = new Font("Verdana", 0, 10);
 
@@ -541,9 +497,22 @@ public class OptimizePanel extends JPanel {
       phaseLabel.setFont(font);
       p.add(phaseLabel, c);
 
+      
+      c.gridx = 0;
+      c.gridy = 2;
+      c.gridwidth = 1;
+      medPerLabel.setFont(font);
+      p.add(medPerLabel, c);
+
+      c.gridx = 1;
+      c.gridy = 2;
+      medPerLabel.setFont(font);
+      p.add(medPhaseLabel, c);
+      
       c.gridx = 1;
       c.gridy = 0;
       p.add(new JLabel("Group:" + value.group), c);
+      
 
       p.setBackground(isSelected ? new Color(0, 150, 240) : Color.white);
       return p;

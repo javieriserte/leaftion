@@ -216,9 +216,11 @@ public class MotionPlotPanel extends JPanel {
       g2d.setColor(Color.blue);
       g2d.setStroke(new BasicStroke(1));
       double[]  yData = this.fittedMotions.get(0).motions.getV_motion();
-      double modelPeriod = this.fittedMotions.get(0).fittedModel.period;
+//      double modelPeriod = this.fittedMotions.get(0).fittedModel.period;
+      double modelPeriod = this.fittedMotions.get(0).fittedModel.medianPeriod;
       double interval = this.fittedMotions.get(0).interval;
-      double modelPhase = this.fittedMotions.get(0).fittedModel.phase;
+//      double modelPhase = this.fittedMotions.get(0).fittedModel.phase;
+      double modelPhase = this.fittedMotions.get(0).fittedModel.medianPhase;
       double modelAmplitude = this.fittedMotions.get(0).fittedModel.amplitude;
       for (int i = 1; i < yData.length; i++) {
         double x1_tr = ((i - 1)*interval - minX) / (maxX - minX) * dataAreaWidth + hTickAreaWidth;

@@ -1,12 +1,18 @@
 package org.jiserte.leaftion.math;
 
+import java.awt.Color;
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.util.List;
+
+import javax.imageio.ImageIO;
 
 import org.jiserte.leaftion.image.ImageProcessor;
 
 import Jama.Matrix;
 
+@SuppressWarnings("unused")
 public class MotionEstimator {
 	
 	public static final double GRADIENT_THRESHOLD = 8;
@@ -142,12 +148,10 @@ public class MotionEstimator {
     
     double[] h_motion = new double[numberOfTempBlurredFrames];
 
-		
-		for (int i = 0 ; i < numberOfTempBlurredFrames; i++) {
+    for (int i = 0 ; i < numberOfTempBlurredFrames; i++) {
 		  
 		  double[][] vx = Matrix2dOp.zeros2D(xdim, ydim);
       double[][] vy = Matrix2dOp.zeros2D(xdim, ydim);
-      
       
       for (int k = 0; k < blurTemporalKernel.length; k++) {
         for (int x = 0; x <xdim ; x++) {
@@ -157,6 +161,19 @@ public class MotionEstimator {
           }
         }
       }
+      
+      // Just for debugging
+//      File vyDataFile = new File("c:\\javier\\leaftionTests\\motionsY",String.format( "im%03d.jpg", i ));
+//      BufferedImage im = this.imageFromArray2D(vy);
+//      try {
+//        ImageIO.write(im, "jpg", vyDataFile);
+//      } catch (IOException e) {
+//        // TODO Auto-generated catch block
+//        e.printStackTrace();
+//      }
+          
+
+      
 
       double eps = Math.pow(2f, -52);
       int nx_eps = 0;
@@ -193,5 +210,38 @@ public class MotionEstimator {
 		return new Motions(h_motion, v_motion);
 		
 	}
+	
+	public BufferedImage imageFromArray2D(double[][] data) {
+	  int width = data.length;
+	  int height = data[0].length;
+	  
+	  double scale = 1000;
+	  
+	  BufferedImage im = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+	  
+	  for (int x = 0; x < width ; x++) {
+	    
+	    for (int y = 0; y < height ; y++) {
+	      
+	      int r = data[x][y] > 0 ? (int) (scale * data[x][y]) : 0;
+	      r = Math.min(255, r);
+        int b = data[x][y] < 0 ? (int) - (scale * data[x][y]) : 0;
+        b = Math.min(255, b);
+        int g = 0;
+	      System.out.println(data[x][y]);
+	      int rgbColor = (new Color(r,g,b)).getRGB();
+	      im.setRGB(x, y, rgbColor);
+	      
+	    }
+	  }
+	  
+	  
+	  
+	  
+	  
+    return im;
+	  
+	}
+	
 
 }
