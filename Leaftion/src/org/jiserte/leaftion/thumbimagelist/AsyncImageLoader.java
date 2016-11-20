@@ -1,11 +1,8 @@
 package org.jiserte.leaftion.thumbimagelist;
 
 import java.awt.Graphics;
-import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.IOException;
-import java.util.List;
 
 import javax.imageio.ImageIO;
 import javax.swing.JComponent;
@@ -47,23 +44,24 @@ public class AsyncImageLoader extends Thread {
         try {
           img = ImageIO.read(this.imageFiles[i]);
           
-          int newSizeH = 100 * img.getWidth() / (Math.max(img.getWidth(), img.getHeight()));
-          int newSizeV = 100 * img.getHeight() / (Math.max(img.getWidth(), img.getHeight()));
+          int maxWidthOrHeight = Math.max( img.getWidth(), img.getHeight() ); 
           
-          BufferedImage newImage = new BufferedImage(newSizeH, newSizeV, BufferedImage.TYPE_INT_RGB);
+          int newSizeH = 100 * img.getWidth()  / maxWidthOrHeight;
+          int newSizeV = 100 * img.getHeight() / maxWidthOrHeight;
+          
+          BufferedImage newImage = new BufferedImage( newSizeH, newSizeV, BufferedImage.TYPE_INT_RGB);
+          
           Graphics g = newImage.createGraphics();
           g.drawImage(img, 0, 0, newSizeH, newSizeV, null);
           g.dispose();
+          
           this.imagesResult[i] = newImage;
           
           if ( this.parent != null) {
             SwingUtilities.invokeLater(new Runnable() {
               
-              @Override
-              public void run() {
-                parent.updateUI();
-                
-              }
+              @Override public void run() { parent.updateUI(); }
+            
             });
           }
 
@@ -72,7 +70,6 @@ public class AsyncImageLoader extends Thread {
         }
       }
     }
-    System.out.println("All images loaded");
   }
   // ------------------------------------------------------------------------ //
 

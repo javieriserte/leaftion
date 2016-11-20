@@ -7,6 +7,9 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
 import javax.swing.JLabel;
 import javax.swing.JList;
@@ -31,12 +34,14 @@ public class LoggingListPanel extends JList<LogItem> {
   // Instance variables
   private LogItem[] logContent;
   private int logIndex;
+  private Map<Integer, Integer> allocatedSlots;
   // ------------------------------------------------------------------------ //
 
   // ------------------------------------------------------------------------ //
   // Constructor
   public LoggingListPanel(int bufferSize) {
     super();
+    this.allocatedSlots = new HashMap<>();
     this.logContent = new LogItem[bufferSize];
     this.logIndex = 0;
     this.setListData(this.logContent);
@@ -47,35 +52,58 @@ public class LoggingListPanel extends JList<LogItem> {
 
   // ------------------------------------------------------------------------ //
   // Public interface
+  @Deprecated
   public void addMessage(LogItem msg) {
-    if (this.logIndex >= this.logContent.length) {
+    if ( this.logIndex >= this.logContent.length ) {
       this.rewind();
     }
     this.logContent[this.logIndex] = msg;
     this.logIndex++;
     this.updateContent();
   }
-  private void updateContent() {
-    this.setListData(Arrays.copyOf(this.logContent, this.logIndex ));
-    SwingUtilities.invokeLater(new Runnable() {
-      @Override
-      public void run() {
-        int lastIndex = LoggingListPanel.this.getModel().getSize() - 1;
-        if (lastIndex >= 0) {
-          LoggingListPanel.this.ensureIndexIsVisible(lastIndex);
-        }
-      }
-    });
+  
+  public void addVolatileMessage(LogItem msg) {
+    if ( this.logIndex >= this.logContent.length ) {
+      this.rewind();
+    }
+    this.logContent[this.logIndex] = msg;
+    this.logIndex++;
+    this.updateContent();
   }
-
-  private void rewind() {
-    if (this.logIndex>0) {
-      for (int i = 1; i< this.logIndex; i++) {
-        this.logContent[i-1] = this.logContent[i]; 
-      }
+  
+  public int allocateUpdatableSlot() {
+    
+    if (this.logIndex >= this.logContent.length) {
+      this.rewind();
+    } else {
       this.logIndex--;
     }
+    
+    int slotNumber = 0 ;
+    Set<Integer> slots = this.allocatedSlots.keySet();
+    for ( Integer i : slots ) { slotNumber = Math.max( i, slotNumber ); }
+    this.allocatedSlots.put(slotNumber, this.logIndex);
+    this.logIndex++;
+    this.logContent[this.logIndex] = new LogItem("", 0);
+    this.updateContent();
+    return slotNumber;
   }
+  
+  public void updateAllocatedSlot(LogItem msg, int slot) {
+    
+    int index = this.allocatedSlots.get(slot);
+    if (index > 0) {
+      this.logContent[this.logIndex] = msg;
+    }
+  }
+  
+  public void clearLog() {
+    
+    this.logIndex = 0;
+    this.updateContent();
+  }
+  
+  @Deprecated
   public void updateMessage(LogItem msg) {
     if (this.logIndex >= this.logContent.length) {
       this.rewind();
@@ -88,10 +116,52 @@ public class LoggingListPanel extends JList<LogItem> {
     
     
   }
-  public void clearLog() {
-    this.logIndex = 0;
-    this.updateContent();
+
+  
+  // ------------------------------------------------------------------------ //
+
+  // ------------------------------------------------------------------------ //
+  // private methods
+  private void updateContent() {
+    // Copy data of the log to the UI list object
+    this.setListData(Arrays.copyOf(this.logContent, this.logIndex ));
+    
+    // Asynchronous update of the UI of the parent component
+    SwingUtilities.invokeLater(new Runnable() {
+      @Override
+      public void run() {
+        int lastIndex = LoggingListPanel.this.getModel().getSize() - 1;
+        if (lastIndex >= 0) { 
+          LoggingListPanel.this.ensureIndexIsVisible(lastIndex);
+        }
+      }
+    });
   }
+
+  // ------------------------------------------------------------------------ //
+  // rewind moves all elements of a position lesser, drops the first element of
+  // the list
+  private void rewind() {
+    // Checks that list contains elements
+    if (this.logIndex>0) {
+            
+      // move all elements one step back in the list
+      for (int i = 1; i< this.logIndex; i++) {
+        this.logContent[i-1] = this.logContent[i]; 
+      }
+      
+      // update indexs of allocated slots
+      for (int i : this.allocatedSlots.keySet() ) {
+        this.allocatedSlots.put(i, this.allocatedSlots.get(i)-1);
+      }
+      
+      // update the last element index
+      this.logIndex--;
+    }
+  }
+  // ------------------------------------------------------------------------ //
+  
+
   // ------------------------------------------------------------------------ //
   
   // ------------------------------------------------------------------------ //

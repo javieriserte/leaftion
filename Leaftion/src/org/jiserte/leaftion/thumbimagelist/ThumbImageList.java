@@ -6,27 +6,17 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.geom.Ellipse2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
-import javax.swing.JButton;
-import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
-import javax.swing.JScrollPane;
 import javax.swing.ListCellRenderer;
-import javax.swing.SwingUtilities;
-import javax.swing.UIManager;
-import javax.swing.WindowConstants;
 
 public class ThumbImageList extends JList<BufferedImage> {
 
@@ -75,50 +65,7 @@ public class ThumbImageList extends JList<BufferedImage> {
   }
   // ------------------------------------------------------------------------ //
 
-  
-  public static void main(String[] args) {
 
-    try {
-      UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-      SwingUtilities.invokeLater(new Runnable() {
-        public void run() {
-          // ---------------------------------------------------------------- //
-          // creates the main instance
-          JFrame pt = new JFrame();
-          pt.setVisible(true);
-          pt.setPreferredSize(new Dimension(1024, 768));
-          pt.setSize(new Dimension(1024, 768));
-          pt.setLocationRelativeTo(null);
-          pt.setTitle("Leaftion");
-          pt.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-          pt.setLayout(new BorderLayout());
-          ThumbImageList thumbImageList = new ThumbImageList();
-          
-          pt.add(new JScrollPane(thumbImageList), BorderLayout.CENTER);
-          JButton button = new JButton("Start");
-          pt.add(button,BorderLayout.NORTH);
-          button.addActionListener(new ActionListener() {
-            
-            @Override
-            public void actionPerformed(ActionEvent e) {
-              
-              File f = new File("B:\\Javier\\1raCamMdHdcp5cDCP5");
-              
-              File[] fs = f.listFiles();
-
-              thumbImageList.loadImages(fs);
-              
-            }
-          });
-          pt.pack();
-          // ---------------------------------------------------------------- //
-        }
-      });
-    } catch (Exception e) {
-      System.out.println(e);
-    }
-    
-  }
   
   // ------------------------------------------------------------------------ //
   // Auxiliary Classes
@@ -146,12 +93,19 @@ public class ThumbImageList extends JList<BufferedImage> {
     // Constructor
     public ThumbnailImageCellRenderer() {
       super();
-      this.defaultIcon = new BufferedImage(
-          this.defaultHSize, 
-          this.defaultVSize, 
-          BufferedImage.TYPE_INT_RGB);
       
+      // -------------------------------------------------------------------- //
+      // Get Icon for images that aren't loaded yet
+      this.defaultIcon = this.getDefaultIconImage();
+      // -------------------------------------------------------------------- //
+      
+      // -------------------------------------------------------------------- //
+      // Set layout of the thumbnail
       this.setLayout( new BorderLayout());
+      // -------------------------------------------------------------------- //
+
+      // -------------------------------------------------------------------- //
+      // Generate a labels for the current image thumbnail
       this.iconLabel = new JLabel();
       this.iconLabel.setHorizontalAlignment(JLabel.CENTER);
       this.add(this.iconLabel, BorderLayout.CENTER);
@@ -159,23 +113,13 @@ public class ThumbImageList extends JList<BufferedImage> {
       this.numberLabel = new JLabel();
       this.numberLabel.setHorizontalAlignment(JLabel.CENTER);
       this.add(this.numberLabel, BorderLayout.SOUTH);
+      // -------------------------------------------------------------------- //
       
-      Graphics2D g = (Graphics2D) this.defaultIcon.getGraphics();
-      
-      g.setColor(new Color (60,60,60));
-      g.fillRect(0, 0, this.defaultHSize, this.defaultVSize);
-      
-      g.setColor(Color.red);
-      g.setStroke(new BasicStroke(4));
-      int circleSize = Math.min(defaultVSize, defaultVSize)/2;
-      
-      g.draw(new Ellipse2D.Double(
-          this.defaultHSize/4,
-          this.defaultVSize/4,
-          circleSize, circleSize));
-      g.dispose();
-      
+      // -------------------------------------------------------------------- //
+      // Define a border for the thumbnail
       this.setBorder( BorderFactory.createLineBorder(Color.black, 1) );      
+      // -------------------------------------------------------------------- //
+
     }
     // ---------------------------------------------------------------------- //
 
@@ -213,7 +157,43 @@ public class ThumbImageList extends JList<BufferedImage> {
     }
     // ---------------------------------------------------------------------- //
     
+    // ---------------------------------------------------------------------- //
+    //  Private methods
+    
+    private BufferedImage getDefaultIconImage() {
+
+      BufferedImage defaultIcon = new BufferedImage(
+          this.defaultHSize, 
+          this.defaultVSize, 
+          BufferedImage.TYPE_INT_RGB);
+      
+      Graphics2D g = (Graphics2D) this.defaultIcon.getGraphics();
+      
+      g.setColor(new Color (60,60,60));
+      g.fillRect(0, 0, this.defaultHSize, this.defaultVSize);
+      
+      g.setColor(Color.red);
+      g.setStroke(new BasicStroke(4));
+      int circleSize = Math.min(defaultVSize, defaultVSize)/2;
+      
+      g.draw(new Ellipse2D.Double(
+          this.defaultHSize/4,
+          this.defaultVSize/4,
+          circleSize, circleSize));
+      g.dispose();
+      
+      return defaultIcon;
+      
+    }
+    
+    // ---------------------------------------------------------------------- //
+    
   }
   // ------------------------------------------------------------------------ //
+  
+
+
+
+  
 
 }
