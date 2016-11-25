@@ -16,6 +16,7 @@ import javax.imageio.ImageIO;
 
 import org.jiserte.leaftion.events.ProcessingFramesEvent;
 import org.jiserte.leaftion.events.ProcessingFramesListener;
+import org.jiserte.leaftion.image.filenamefilter.JpegFileNameFilter;
 
 public class ImageLibrary {
 
@@ -33,20 +34,21 @@ public class ImageLibrary {
     return brightCompositeImage;
   }
 
-  public void getImageFilesInFolder(File folder) {
-
-    File[] listFiles = folder.listFiles(new JpegFileNameFilter());
-    
-    Arrays.sort(listFiles, new Comparator<File>() {
-		@Override
-		public int compare(File o1, File o2) {
-			return o1.getAbsolutePath().compareTo(o2.getAbsolutePath());
-		}
-	});
-    
-	this.setImageFiles(listFiles);
-
-  }
+//  @Deprecated
+//  public void getImageFilesInFolder(File folder) {
+//
+//    File[] listFiles = folder.listFiles(new JpegFileNameFilter());
+//    
+//    Arrays.sort(listFiles, new Comparator<File>() {
+//		@Override
+//		public int compare(File o1, File o2) {
+//			return o1.getAbsolutePath().compareTo(o2.getAbsolutePath());
+//		}
+//	});
+//    
+//	this.setImageFiles(listFiles);
+//
+//  }
 
   public BufferedImage next() {
     this.currentImageIndex++;
@@ -68,7 +70,7 @@ public class ImageLibrary {
     return imageFiles;
   }
 
-  private void setImageFiles(File[] imageFiles) {
+  public void setImageFiles( File[] imageFiles ) {
     this.imageFiles = imageFiles;
   }
 

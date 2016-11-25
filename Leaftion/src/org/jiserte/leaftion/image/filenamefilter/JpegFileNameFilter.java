@@ -1,15 +1,21 @@
-package org.jiserte.leaftion.image;
+package org.jiserte.leaftion.image.filenamefilter;
 
 import java.io.File;
-import java.io.FilenameFilter;
 
-public class JpegFileNameFilter implements FilenameFilter {
+import javax.swing.filechooser.FileFilter;
+
+public class JpegFileNameFilter extends FileFilter {
 
   @Override
-  public boolean accept(File dir, String filename) {
+  public boolean accept( File file ) {
     
-    return filename.matches("^.*[jJ][pP][eE]*[gG]$") ;
+    return file.getName().matches("^.*[jJ][pP][eE]*[gG]$") ;
     
+  }
+
+  @Override
+  public String getDescription() {
+    return "JPG - Joint Photographic Experts Group(*.jpeg/ *.jpg)";
   }
 
 }

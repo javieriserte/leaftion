@@ -18,6 +18,7 @@ public class LogItem {
   private String message;
   private int type;
   private Date timeStamp;
+  // TODO: add message types here
   // ------------------------------------------------------------------------ //
 
   // ------------------------------------------------------------------------ //

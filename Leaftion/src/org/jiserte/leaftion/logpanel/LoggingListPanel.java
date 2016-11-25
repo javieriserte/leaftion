@@ -46,7 +46,7 @@ public class LoggingListPanel extends JList<LogItem> {
     this.logIndex = 0;
     this.setListData(this.logContent);
     this.setCellRenderer(this.new LogItemCellRenderer());
-    this.updateContent();
+    this.updateLogUI();
   }
   // ------------------------------------------------------------------------ //
 
@@ -55,64 +55,95 @@ public class LoggingListPanel extends JList<LogItem> {
   @Deprecated
   public void addMessage(LogItem msg) {
     if ( this.logIndex >= this.logContent.length ) {
-      this.rewind();
+      this.shiftLogBack();
     }
     this.logContent[this.logIndex] = msg;
     this.logIndex++;
-    this.updateContent();
+    this.updateLogUI();
   }
   
   public void addVolatileMessage(LogItem msg) {
-    if ( this.logIndex >= this.logContent.length ) {
-      this.rewind();
+    if ( this.headerAtTheEnd() ) {
+      this.shiftLogBack();
     }
-    this.logContent[this.logIndex] = msg;
-    this.logIndex++;
-    this.updateContent();
+    this.putMessageAtHeader(msg);
+    this.moveHeaderForward();
+    this.updateLogUI();
   }
   
-  public int allocateUpdatableSlot() {
+  public int allocateUpdatableSlot(String initialMessage) {
     
-    if (this.logIndex >= this.logContent.length) {
-      this.rewind();
+    if ( this.headerAtTheEnd() ) {
+      this.shiftLogBack();
     } else {
-      this.logIndex--;
     }
     
-    int slotNumber = 0 ;
-    Set<Integer> slots = this.allocatedSlots.keySet();
-    for ( Integer i : slots ) { slotNumber = Math.max( i, slotNumber ); }
-    this.allocatedSlots.put(slotNumber, this.logIndex);
+    int slotNumber = getNextFreeUpdatableSlotIndex();
+
+    this.assignUpdatableSlotToHeader(slotNumber);
+    this.putMessageAtHeader( new LogItem( initialMessage, 0 ));
+    this.moveHeaderForward();
+    this.updateLogUI() ;
+    return slotNumber ;
+  }
+
+  private boolean headerAtTheEnd() {
+    return this.logIndex >= this.logContent.length;
+  }
+  
+  private void assignUpdatableSlotToHeader(int slotNumber ) {
+    this.allocatedSlots.put( slotNumber, this.logIndex ) ;
+  }
+
+  private void putMessageAtHeader(LogItem logItem) {
+
+    this.logContent[ this.logIndex ] = logItem;
+  }
+
+  private void moveHeaderForward() {
     this.logIndex++;
-    this.logContent[this.logIndex] = new LogItem("", 0);
-    this.updateContent();
-    return slotNumber;
+  }
+
+  
+  @SuppressWarnings("unused")
+  private void moveHeaderBackwards() { 
+    this.logIndex-- ; 
+  }
+  
+  private int getNextFreeUpdatableSlotIndex() {
+    Set<Integer> slots = this.allocatedSlots.keySet();
+    if (slots.isEmpty()) {return 0;}
+    int slotNumber = 0 ;
+    for ( Integer i : slots ) { slotNumber = Math.max( i, slotNumber ); }
+    return slotNumber+1;
   }
   
   public void updateAllocatedSlot(LogItem msg, int slot) {
     
     int index = this.allocatedSlots.get(slot);
-    if (index > 0) {
-      this.logContent[this.logIndex] = msg;
+    System.out.println("Slot: "+slot+" / Index: "+ index);
+    if (index >= 0) {
+      this.logContent[index] = msg;
+      this.updateLogUI();
     }
   }
   
   public void clearLog() {
     
     this.logIndex = 0;
-    this.updateContent();
+    this.updateLogUI();
   }
   
   @Deprecated
   public void updateMessage(LogItem msg) {
     if (this.logIndex >= this.logContent.length) {
-      this.rewind();
+      this.shiftLogBack();
     } else {
       this.logIndex--;
     }
     this.logContent[this.logIndex] = msg;
     this.logIndex++;
-    this.updateContent();
+    this.updateLogUI();
     
     
   }
@@ -122,7 +153,7 @@ public class LoggingListPanel extends JList<LogItem> {
 
   // ------------------------------------------------------------------------ //
   // private methods
-  private void updateContent() {
+  private void updateLogUI() {
     // Copy data of the log to the UI list object
     this.setListData(Arrays.copyOf(this.logContent, this.logIndex ));
     
@@ -141,7 +172,7 @@ public class LoggingListPanel extends JList<LogItem> {
   // ------------------------------------------------------------------------ //
   // rewind moves all elements of a position lesser, drops the first element of
   // the list
-  private void rewind() {
+  private void shiftLogBack() {
     // Checks that list contains elements
     if (this.logIndex>0) {
             
@@ -155,8 +186,6 @@ public class LoggingListPanel extends JList<LogItem> {
         this.allocatedSlots.put(i, this.allocatedSlots.get(i)-1);
       }
       
-      // update the last element index
-      this.logIndex--;
     }
   }
   // ------------------------------------------------------------------------ //

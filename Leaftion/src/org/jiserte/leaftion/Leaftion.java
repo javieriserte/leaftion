@@ -12,11 +12,22 @@ import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.awt.event.TextEvent;
 import java.awt.event.TextListener;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowListener;
 import java.awt.image.BufferedImage;
+import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintStream;
+import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 
@@ -43,6 +54,8 @@ import javax.swing.event.ListSelectionListener;
 import org.jiserte.leaftion.events.ProcessingFramesEvent;
 import org.jiserte.leaftion.events.ProcessingFramesListener;
 import org.jiserte.leaftion.image.ImageLibrary;
+import org.jiserte.leaftion.image.filenamefilter.JpegFileNameFilter;
+import org.jiserte.leaftion.image.filenamefilter.PngFileNameFilter;
 import org.jiserte.leaftion.logpanel.LogItem;
 import org.jiserte.leaftion.logpanel.LoggingListPanel;
 import org.jiserte.leaftion.math.MotionEstimator;
@@ -59,10 +72,10 @@ public class Leaftion extends JFrame {
 
   // ------------------------------------------------------------------------ //
   // Instance variables
-  private File imageFolder = null;
   private ImageLibrary library;
   private Locale locale;
   private List<Motions> motionDetectionResults;
+  private boolean hasUnsavedResults;
   // ------------------------------------------------------------------------ //
 
   // ------------------------------------------------------------------------ //
@@ -81,6 +94,8 @@ public class Leaftion extends JFrame {
   private TextField intervalTxt;
   private LoggingListPanel log;
   private JButton saveButton;
+  private JButton exportRegionButton;
+  private JButton loadRegionsButton;
   private ThumbImageList thumbnails;
   // ------------------------------------------------------------------------ //
 
@@ -95,12 +110,32 @@ public class Leaftion extends JFrame {
           // ---------------------------------------------------------------- //
           // creates the main instance
           Leaftion pt = new Leaftion();
+          pt.hasUnsavedResults = false;
           pt.setVisible(true);
           pt.setPreferredSize(new Dimension(1024, 768));
           pt.setSize(new Dimension(1024, 768));
           pt.setLocationRelativeTo(null);
           pt.setTitle("Leaftion");
-          pt.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+          pt.setDefaultCloseOperation( WindowConstants.DO_NOTHING_ON_CLOSE);
+          pt.addWindowListener(new WindowListener() {
+            
+            @Override public void windowOpened(WindowEvent e) {  }
+            @Override public void windowIconified(WindowEvent e) {  }
+            @Override public void windowDeiconified(WindowEvent e) {  }
+            @Override public void windowDeactivated(WindowEvent e) {  }
+            
+            @Override public void windowClosing(WindowEvent e) {
+              Leaftion l = (Leaftion ) e.getSource();
+              if ( l.hasUnsavedResults ) {
+                int a = JOptionPane.showConfirmDialog(l, "You have unsaved results, exit anyway?", "Exit", JOptionPane.YES_NO_OPTION);
+                if (a == JOptionPane.YES_OPTION) { l.dispose(); }
+              } else { l.dispose(); }
+            }
+            
+            @Override public void windowClosed(WindowEvent e) {  }
+            @Override public void windowActivated(WindowEvent e) {  }
+
+          });
           pt.createGUI();
           pt.pack();
           // ---------------------------------------------------------------- //
@@ -203,9 +238,20 @@ public class Leaftion extends JFrame {
     // Define Save button
     this.saveButton = new JButton(
         new ImageIcon("resources/icons/save.32.png"));
-    saveButton.addActionListener(new SaveButtonActionListener());
+    this.saveButton.addActionListener(new SaveButtonActionListener());
     // ---------------------------------------------------------------------- //
 
+    // ---------------------------------------------------------------------- //
+    // Define export regions
+    this.exportRegionButton = new JButton("E. R.");
+    this.exportRegionButton.addActionListener(new ExportButtonActionListener());
+    // ---------------------------------------------------------------------- //
+
+    // ---------------------------------------------------------------------- //
+    // Define export regions
+    this.loadRegionsButton = new JButton("L.R");
+    this.loadRegionsButton.addActionListener(new LoadRegionsButtonActionListener());
+    // ---------------------------------------------------------------------- //
     
     // ---------------------------------------------------------------------- //
     // Define la toolbar
@@ -214,6 +260,8 @@ public class Leaftion extends JFrame {
     tb.addSeparator(new Dimension(5, 0));
     tb.add(button);
     tb.add(this.saveButton);
+    tb.add(this.exportRegionButton);
+    tb.add(this.loadRegionsButton);
     tb.addSeparator(new Dimension(3, 0));
     tb.add(this.currentFolderLabel);
     tb.addSeparator(sepDimension);
@@ -303,25 +351,25 @@ public class Leaftion extends JFrame {
     // Log Panel
     this.log = new LoggingListPanel(100);
     this.logScrollPane = new JScrollPane(this.log);
-    this.log.addMessage(new LogItem("Welcome!", LoggingListPanel.NORMAL_TYPE));
+    this.log.addVolatileMessage(new LogItem("Welcome!",LoggingListPanel.NORMAL_TYPE));
+    //this.log.addMessage(new LogItem("Welcome!", LoggingListPanel.NORMAL_TYPE));
     this.add(this.logScrollPane, BorderLayout.SOUTH);
     // ---------------------------------------------------------------------- //
     
 
   }
-
-  private boolean setImageFolder(File selectedFile) {
-
-    this.imageFolder = selectedFile;
-    this.currentFolderLabel.setText(this.imageFolder.getAbsolutePath());
+  
+  @Update
+  private void setImageFiles( File[] files ) {
+    
     this.library = new ImageLibrary();
-    this.library.addCropImageProccessingListener(
-        new CroppingProccessFrameListener());
+    
+    // TODO: Change these listener for UIworkers
+    this.library.addCropImageProccessingListener( new CroppingProccessFrameListener() );
 
-    this.library.addBrightImageProccesingListener(
-        new BrightProccessFrameListener());
-
-    this.library.getImageFilesInFolder(this.imageFolder);
+    this.library.addBrightImageProccesingListener( new BrightProccessFrameListener() );
+    
+    this.library.setImageFiles(files);
 
     BufferedImage im = this.library.getCurrentImage();
 
@@ -330,10 +378,7 @@ public class Leaftion extends JFrame {
       this.counterLabel.setText("1");
       this.counterLabel.setToolTipText(
           "Control+Izq y Control+Der para ir a la imagen siguiente o previa.");
-      return true;
     }
-
-    return false;
 
   }
 
@@ -456,37 +501,46 @@ public class Leaftion extends JFrame {
   class OpenFolderButtonActionListener implements ActionListener {
 
     @Override
-    public void actionPerformed(ActionEvent e) {
-      
+    public void actionPerformed(ActionEvent arg0) {
+
       JFileChooser fc = new JFileChooser();
-      
-      fc.setMultiSelectionEnabled(false);
-      fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+      fc.setMultiSelectionEnabled(true);
+      fc.setFileSelectionMode(  JFileChooser.FILES_ONLY );
+
+      fc.addChoosableFileFilter( new PngFileNameFilter());
+      fc.addChoosableFileFilter( new JpegFileNameFilter());
       
       fc.showOpenDialog(Leaftion.this);
+      File[] selectedFiles = fc.getSelectedFiles();
       
-      File selectedFile = fc.getSelectedFile();
+      Arrays.sort( selectedFiles, new Comparator<File>() {
+        @Override public int compare(File o1, File o2) {
+          return o1.getAbsolutePath().compareTo(o2.getAbsolutePath());
+        } } );
       
-      if (selectedFile != null) {
-        boolean foundImages = Leaftion.this.setImageFolder(selectedFile);
-        if (foundImages) {
-          LogItem msg = new LogItem(
-              Leaftion.this.library.getImageFiles().length + " Images Found",
-              LoggingListPanel.NORMAL_TYPE);
-          Leaftion.this.log.addMessage(msg);
-          Leaftion.this.thumbnails.loadImages(
-              Leaftion.this.library.getImageFiles());
-          Leaftion.this.buttonBright.setEnabled(true);
-          Leaftion.this.preButton.setEnabled(true);
-          Leaftion.this.nextButton.setEnabled(true);
-          Leaftion.this.runButton.setEnabled(true);
-        } else {
-          LogItem msg = new LogItem("No Images Found",
-              LoggingListPanel.ERROR_TYPE);
-          Leaftion.this.log.addMessage(msg);
-        }
+      if (selectedFiles.length > 0) { 
+        Leaftion.this.setImageFiles( selectedFiles ); 
+        LogItem msg = new LogItem(
+            Leaftion.this.library.getImageFiles().length + " Images Found",
+            LoggingListPanel.NORMAL_TYPE );
+        Leaftion.this.log.addVolatileMessage(  msg  );
+        Leaftion.this.thumbnails.loadImages(   Leaftion.this.library.getImageFiles() );
+        Leaftion.this.buttonBright.setEnabled( true );
+        Leaftion.this.preButton.setEnabled(    true );
+        Leaftion.this.nextButton.setEnabled(   true );
+        Leaftion.this.runButton.setEnabled(    true );
+        
+      } else {
+        
+        LogItem msg = new LogItem("No Images Found",
+            LoggingListPanel.ERROR_TYPE);
+        Leaftion.this.log.addVolatileMessage(msg);
+        
+        
       }
+
     }
+
   }
   
   class SaveButtonActionListener implements ActionListener {
@@ -513,7 +567,8 @@ public class Leaftion extends JFrame {
         if (directory == null || file == null) {
           LogItem msg = new LogItem("File not found or save cancelled",
               LoggingListPanel.WARNING_TYPE);
-          Leaftion.this.log.addMessage(msg);
+          Leaftion.this.log.addVolatileMessage(msg);
+//          Leaftion.this.log.addMessage(msg);
           return;
         }
         
@@ -547,12 +602,14 @@ public class Leaftion extends JFrame {
             os.println("");
 
           }
+          Leaftion.this.hasUnsavedResults = false;
           os.close();
 
           LogItem msg = new LogItem(
               "Results Saved on file: " + outfile.getAbsolutePath(),
               LoggingListPanel.NORMAL_TYPE);
-          Leaftion.this.log.addMessage(msg);
+          Leaftion.this.log.addVolatileMessage(msg);
+//          Leaftion.this.log.addMessage(msg);
 
         } catch (FileNotFoundException e1) {
           e1.printStackTrace();
@@ -588,7 +645,8 @@ public class Leaftion extends JFrame {
           if (imagesRegions.size() == 0) {
             LogItem msg = new LogItem("No regions defined!",
                 LoggingListPanel.ERROR_TYPE);
-            Leaftion.this.log.addMessage(msg);
+            Leaftion.this.log.addVolatileMessage(msg);
+//            Leaftion.this.log.addMessage(msg);
             return;
           }
           // ---------------------------------------------------------------- //
@@ -598,7 +656,8 @@ public class Leaftion extends JFrame {
           // Log start of motion estimation
           LogItem msg = new LogItem("Estimating motions",
               LoggingListPanel.NORMAL_TYPE);
-          Leaftion.this.log.addMessage(msg);
+          Leaftion.this.log.addVolatileMessage(msg);
+//          Leaftion.this.log.addMessage(msg);
           // ---------------------------------------------------------------- //
 
           // ---------------------------------------------------------------- //
@@ -609,13 +668,15 @@ public class Leaftion extends JFrame {
             motionList.add(motions);
           }
           Leaftion.this.motionDetectionResults = motionList;
+          Leaftion.this.hasUnsavedResults = true;
           // ---------------------------------------------------------------- //
           
           // ---------------------------------------------------------------- //
           // Log End of estimation
           msg = new LogItem("Estimating motions Done",
               LoggingListPanel.NORMAL_TYPE);
-          Leaftion.this.log.addMessage(msg);
+          Leaftion.this.log.addVolatileMessage(msg);
+//          Leaftion.this.log.addMessage(msg);
           // ---------------------------------------------------------------- //
         }
       });
@@ -649,47 +710,7 @@ public class Leaftion extends JFrame {
     @Override
     public void actionPerformed(ActionEvent e) {
 
-      // if (Leaftion.this.motionDetectionResults.isEmpty()) {
-      //
-      // JOptionPane.showMessageDialog(Leaftion.this,
-      // "No hay resultados de estimación de movimiento", "Error",
-      // JOptionPane.ERROR_MESSAGE);
-      // return;
-      // }
-
       SwingUtilities.invokeLater(new Runnable() {
-
-//        @Override
-//        public void run() {
-//
-//          JFrame optFrame = new JFrame();
-//          OptimizePanel optimizePanel = new OptimizePanel();
-//          
-//          FittedMotions[] fmot = new FittedMotions[ 6 ];
-//
-//          optimizePanel
-//              .setInterval(Double.parseDouble(intervalTxt.getText()));
-//
-//          for (int i = 0; i < 6; i++) {
-//            fmot[i] = new FittedMotions();
-//            fmot[i].fittedModel = null;
-//            fmot[i].label = String.format("Region %d", i);
-//            fmot[i].motions = dummyMotions(24 +  2*(int)(i/3) ,0.9);
-//          }
-//
-//          optimizePanel.setMotionEstimation(fmot);
-//          optFrame.add(optimizePanel);
-//          optFrame.setVisible(true);
-//          optFrame.setPreferredSize(new Dimension(1024, 768));
-//          optFrame.setSize(new Dimension(1024, 768));
-//          optFrame.setLocationRelativeTo(null);
-//          optFrame.setTitle("Optimize");
-//          optFrame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-//          optFrame.pack();
-//
-//        }
-//      });
-      
 
         
         @Override
@@ -728,56 +749,165 @@ public class Leaftion extends JFrame {
   }
   
   class CroppingProccessFrameListener implements ProcessingFramesListener {
-
+    int loggingSlot ;
     @Override
     public void updateFrame(ProcessingFramesEvent e) {
       LogItem msg = new LogItem(
           "Crop Image (" + e.currentFrame + "/" + e.numberOfFrames + ")",
           LoggingListPanel.NORMAL_TYPE);
-      if (e.currentFrame == 1) {
-        Leaftion.this.log.addMessage(msg);
-      } else {
-        Leaftion.this.log.updateMessage(msg);
-      }
+      Leaftion.this.log.updateAllocatedSlot(msg, this.loggingSlot);
+
     }
     @Override
     public void startProccess(ProcessingFramesEvent e) {
-      Leaftion.this.log.addMessage(new LogItem("Start Cropping Images",
+      Leaftion.this.log.addVolatileMessage(new LogItem("Start Cropping Images",
           LoggingListPanel.NORMAL_TYPE));
+      this.loggingSlot = Leaftion.this.log.allocateUpdatableSlot("Crop Image (0/"+e.numberOfFrames+")");
     }
     @Override
     public void finnishProccess(ProcessingFramesEvent e) {
-      Leaftion.this.log.addMessage(
+      Leaftion.this.log.addVolatileMessage(
           new LogItem("Cropping Done", LoggingListPanel.NORMAL_TYPE));
     }
   }
   
   class BrightProccessFrameListener implements ProcessingFramesListener {
+    int loggingSlot = -1; 
     @Override
     public void updateFrame(ProcessingFramesEvent e) {
       LogItem msg = new LogItem("Making Bright Image (" + e.currentFrame
           + "/" + e.numberOfFrames + ")", LoggingListPanel.NORMAL_TYPE);
 
-      if (e.currentFrame == 1) {
-        Leaftion.this.log.addMessage(msg);
-
-      } else {
-        Leaftion.this.log.updateMessage(msg);
-      }
+      System.out.println(this.loggingSlot);
+      if (this.loggingSlot >= 0 ) {
+        Leaftion.this.log.updateAllocatedSlot(msg, this.loggingSlot);
+      } 
     }
     @Override
     public void startProccess(ProcessingFramesEvent e) {
       LogItem msg = new LogItem("Start Bright Image",
           LoggingListPanel.NORMAL_TYPE);
-      Leaftion.this.log.addMessage(msg);
+      Leaftion.this.log.addVolatileMessage(msg);
+      this.loggingSlot = Leaftion.this.log.allocateUpdatableSlot("Making Bright Image (0"+ e.numberOfFrames + ")");
     }
     @Override
     public void finnishProccess(ProcessingFramesEvent e) {
       LogItem msg = new LogItem("Bright Image Done",
           LoggingListPanel.NORMAL_TYPE);
-      Leaftion.this.log.addMessage(msg);
+      Leaftion.this.log.addVolatileMessage(msg);
     }
   }
   // ------------------------------------------------------------------------ //
 
+  // ------------------------------------------------------------------------ //
+  //
+  class ExportButtonActionListener implements ActionListener {
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+
+      List<Rectangle> currentRegions = Leaftion.this.imagePanel.getRegions();
+      
+      if ( currentRegions.isEmpty() )  return ;
+      
+      JFileChooser fc = new JFileChooser();
+      
+      fc.setFileSelectionMode(JFileChooser.FILES_ONLY);
+      fc.setDialogTitle("Export created regios");
+      fc.addChoosableFileFilter( new CsvFileFilter() );
+      fc.setMultiSelectionEnabled(false);
+      
+      fc.showSaveDialog(Leaftion.this);
+      
+      File selectedFile = fc.getSelectedFile();
+      
+      if (selectedFile != null) {
+        
+        try {
+          
+          PrintStream ps = new PrintStream(new BufferedOutputStream(new FileOutputStream(selectedFile)));
+          List<String> labels = Leaftion.this.imagePanel.getLabels();
+
+          for (int i = 0 ; i < currentRegions.size(); i++) {
+            
+            Rectangle reg = currentRegions.get(i);
+            String lab = labels.get(i);
+            
+            String outline = String.join(";", lab, 
+                String.valueOf( (int) reg.getX() ) ,
+                String.valueOf( (int) reg.getY() ) ,
+                String.valueOf( (int) reg.getWidth() ) ,
+                String.valueOf( (int) reg.getHeight() )
+                );
+            
+            ps.println(outline);
+            
+          }
+          
+          ps.close();
+          
+        } catch (FileNotFoundException e1) {
+          e1.printStackTrace();
+        }
+      }
+    }
+  }
+  
+  class LoadRegionsButtonActionListener implements ActionListener {
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+
+      JFileChooser fc = new JFileChooser();
+      
+      fc.setFileSelectionMode(JFileChooser.FILES_ONLY);
+      fc.setDialogTitle("Export created regios");
+      fc.addChoosableFileFilter( new CsvFileFilter() );
+      fc.setMultiSelectionEnabled(false);
+      
+      fc.showSaveDialog(Leaftion.this);
+      
+      File selectedFile = fc.getSelectedFile();
+      
+      if (selectedFile != null) {
+        
+        try {
+          
+          List<Rectangle> regions = new ArrayList<>();
+          List<String> labels = new ArrayList<>();
+          
+          BufferedReader br = new BufferedReader(new FileReader(selectedFile));
+          
+          String currentLine = null;
+          
+          while( (currentLine=br.readLine()) != null) {
+            System.out.println(currentLine);
+            String[] fields = currentLine.split(";");
+            if ( fields.length ==5 ){
+              int x = Integer.parseInt(fields[1].trim());
+              int y = Integer.parseInt(fields[2].trim());
+              int w = Integer.parseInt(fields[3].trim());
+              int h = Integer.parseInt(fields[4].trim());
+              Rectangle r = new Rectangle(x,y,w,h );
+              regions.add(r);
+              labels.add(fields[0]);
+            }
+          }
+          System.out.println(regions);
+          System.out.println(labels);
+          
+          Leaftion.this.imagePanel.setRegionsAndLabels( regions, labels );
+          System.out.println("Regions Updated");
+          
+          
+        } catch (IOException  | NumberFormatException e2) {
+          e2.printStackTrace();
+        }
+          
+      }
+    }
+  }
+
+  
+  // ------------------------------------------------------------------------ //
 }

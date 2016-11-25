@@ -9,24 +9,40 @@ import java.util.List;
 
 import javax.imageio.ImageIO;
 
+import org.jiserte.leaftion.image.filenamefilter.JpegFileNameFilter;
+
 public class ImageLoader {
 
-  public List<BufferedImage> loadFromFolder(File folder) throws IOException {
-
-    File[] img_files = folder.listFiles(new JpegFileNameFilter());
-    
-    Arrays.sort(img_files);
+//  public List<BufferedImage> loadFromFolder(File folder) throws IOException {
+//
+//    File[] img_files = folder.listFiles(new JpegFileNameFilter());
+//    
+//    Arrays.sort(img_files);
+//    
+//    List<BufferedImage> result = new ArrayList<>();
+//    
+//    for (File current : img_files) {
+//      
+//      result.add(  ImageIO.read(current)  );
+//      
+//    }
+//    
+//    return result;
+//    
+//  }
+  
+  public List<BufferedImage> loadOrderedImageFiles(File[] images) throws IOException {
     
     List<BufferedImage> result = new ArrayList<>();
     
-    for (File current : img_files) {
+    for (File current : images) {
       
       result.add(  ImageIO.read(current)  );
       
     }
     
     return result;
-    
+
   }
   
 }

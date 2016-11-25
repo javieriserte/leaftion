@@ -610,19 +610,15 @@ public class OptimizePanel extends JPanel {
             LogItem msg = new LogItem(
                 "Start fitting " + fm.label ,
                 LoggingListPanel.NORMAL_TYPE);
-            OptimizePanel.this.log.addMessage(msg);
+            OptimizePanel.this.log.addVolatileMessage(msg);
             
-            boolean first = true;
+            int loggingSlot = OptimizePanel.this.log.allocateUpdatableSlot("Fitting...");
+            
             for (int j = 0; j < replicates; j++) {
               msg = new LogItem(
                   "Fitting " + fm.label + " Replicate: " + (j+1),
                   LoggingListPanel.NORMAL_TYPE);
-              if (first) {
-                OptimizePanel.this.log.addMessage(msg);
-                first = false;
-              } else {
-                OptimizePanel.this.log.updateMessage(msg);
-              }
+              OptimizePanel.this.log.updateAllocatedSlot(msg, loggingSlot);
               CosineModel cm = me.optimize();
               models.add(cm);
             }
@@ -630,7 +626,7 @@ public class OptimizePanel extends JPanel {
             msg = new LogItem(
                 "Finnish fitting " + fm.label ,
                 LoggingListPanel.NORMAL_TYPE);
-            OptimizePanel.this.log.addMessage(msg);
+            OptimizePanel.this.log.addVolatileMessage(msg);
 
             // ------------------------------------------------------------------ //
             // Build Fitted results

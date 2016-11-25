@@ -1,15 +1,19 @@
-package org.jiserte.leaftion.image;
+package org.jiserte.leaftion.image.filenamefilter;
 
 import java.io.File;
-import java.io.FilenameFilter;
 
-public class PngFileNameFilter implements FilenameFilter {
+import javax.swing.filechooser.FileFilter;
+
+public class PngFileNameFilter extends FileFilter {
 
   @Override
-  public boolean accept(File dir, String filename) {
-    
-    return filename.matches("^.*[Pn][nN][gG]$") ;
-    
+  public boolean accept(File arg0) {
+    return arg0.getName().matches("^.*[Pn][nN][gG]$") ;
+  }
+
+  @Override
+  public String getDescription() {
+    return "PNG - Portable Network Graphics (.png)";
   }
   
 }

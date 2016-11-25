@@ -167,6 +167,7 @@ public class ThumbImageList extends JList<BufferedImage> {
           this.defaultVSize, 
           BufferedImage.TYPE_INT_RGB);
       
+      this.defaultIcon = defaultIcon;
       Graphics2D g = (Graphics2D) this.defaultIcon.getGraphics();
       
       g.setColor(new Color (60,60,60));
