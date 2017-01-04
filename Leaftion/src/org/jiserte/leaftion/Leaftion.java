@@ -22,9 +22,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.PrintStream;
-import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -80,7 +78,7 @@ public class Leaftion extends JFrame {
 
   // ------------------------------------------------------------------------ //
   // Components
-  private JLabel currentFolderLabel;
+//  private JLabel currentFolderLabel;
   private MultiSelectImagePanel imagePanel;
   private JButton buttonBright;
   private JButton preButton;
@@ -160,17 +158,17 @@ public class Leaftion extends JFrame {
 
     // ---------------------------------------------------------------------- //
     // Define el label para mostrar el nombre de la carpeta
-    this.currentFolderLabel = new JLabel("No folder selected");
-    currentFolderLabel.setMinimumSize(new Dimension(150, 50));
-    currentFolderLabel.setPreferredSize(new Dimension(250, 50));
-    currentFolderLabel.setMaximumSize(new Dimension(250, 50));
+//    this.currentFolderLabel = new JLabel("No folder selected");
+//    currentFolderLabel.setMinimumSize(new Dimension(150, 50));
+//    currentFolderLabel.setPreferredSize(new Dimension(250, 50));
+//    currentFolderLabel.setMaximumSize(new Dimension(250, 50));
     // ---------------------------------------------------------------------- //
 
     // ---------------------------------------------------------------------- //
     // Define el botón para buscar la carpeta de imágenes
     JButton button = new JButton(  new ImageIcon("resources/icons/folder.32.png"));
     button.addActionListener(new OpenFolderButtonActionListener());
-    button.setToolTipText("Select the images folder");
+    button.setToolTipText("Select the image files");
     // ---------------------------------------------------------------------- //
 
     // ---------------------------------------------------------------------- //
@@ -263,7 +261,7 @@ public class Leaftion extends JFrame {
     tb.add(this.exportRegionButton);
     tb.add(this.loadRegionsButton);
     tb.addSeparator(new Dimension(3, 0));
-    tb.add(this.currentFolderLabel);
+//    tb.add(this.currentFolderLabel);
     tb.addSeparator(sepDimension);
     tb.add(buttonBright);
     tb.addSeparator(sepDimension);
@@ -646,7 +644,6 @@ public class Leaftion extends JFrame {
             LogItem msg = new LogItem("No regions defined!",
                 LoggingListPanel.ERROR_TYPE);
             Leaftion.this.log.addVolatileMessage(msg);
-//            Leaftion.this.log.addMessage(msg);
             return;
           }
           // ---------------------------------------------------------------- //
@@ -654,10 +651,14 @@ public class Leaftion extends JFrame {
 
           // ---------------------------------------------------------------- //
           // Log start of motion estimation
-          LogItem msg = new LogItem("Estimating motions",
-              LoggingListPanel.NORMAL_TYPE);
-          Leaftion.this.log.addVolatileMessage(msg);
-//          Leaftion.this.log.addMessage(msg);
+          SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+              LogItem msg = new LogItem("Estimating motions",
+                  LoggingListPanel.NORMAL_TYPE);
+              Leaftion.this.log.addVolatileMessage(msg);
+            }
+          });
           // ---------------------------------------------------------------- //
 
           // ---------------------------------------------------------------- //
@@ -673,10 +674,9 @@ public class Leaftion extends JFrame {
           
           // ---------------------------------------------------------------- //
           // Log End of estimation
-          msg = new LogItem("Estimating motions Done",
+          LogItem msg = new LogItem("Estimating motions Done",
               LoggingListPanel.NORMAL_TYPE);
           Leaftion.this.log.addVolatileMessage(msg);
-//          Leaftion.this.log.addMessage(msg);
           // ---------------------------------------------------------------- //
         }
       });
@@ -899,10 +899,11 @@ public class Leaftion extends JFrame {
           Leaftion.this.imagePanel.setRegionsAndLabels( regions, labels );
           System.out.println("Regions Updated");
           
+          br.close();
           
         } catch (IOException  | NumberFormatException e2) {
           e2.printStackTrace();
-        }
+        } 
           
       }
     }
